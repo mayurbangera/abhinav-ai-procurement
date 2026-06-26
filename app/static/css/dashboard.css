@@ -1,0 +1,216 @@
+/* ===========================
+   ABHINAV GROUP AI PROCUREMENT
+   Enterprise Theme v1
+=========================== */
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:#f4f7fc;
+
+    color:#1f2937;
+
+}
+
+/* Sidebar */
+
+.sidebar{
+
+    width:260px;
+
+    min-height:100vh;
+
+    background:#0f172a;
+
+    position:fixed;
+
+    left:0;
+
+    top:0;
+
+    color:white;
+
+    transition:.3s;
+
+}
+
+.sidebar-header{
+
+    padding:28px 24px;
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+}
+
+.sidebar-title{
+
+    font-size:22px;
+
+    font-weight:700;
+
+}
+
+.sidebar-subtitle{
+
+    color:#94a3b8;
+
+    font-size:13px;
+
+}
+
+.sidebar .nav-link{
+
+    color:#cbd5e1;
+
+    padding:14px 24px;
+
+    border-radius:10px;
+
+    margin:4px 12px;
+
+    transition:.25s;
+
+}
+
+.sidebar .nav-link:hover{
+
+    background:#2563eb;
+
+    color:white;
+
+}
+
+.sidebar .nav-link.active{
+
+    background:#2563eb;
+
+    color:white;
+
+}
+
+/* Main Content */
+
+.main-content{
+
+    margin-left:260px;
+
+}
+
+/* Navbar */
+
+.top-navbar{
+
+    background:white;
+
+    border-bottom:1px solid #e5e7eb;
+
+    padding:18px 30px;
+
+}
+
+/* Cards */
+
+.stat-card{
+
+    border:none;
+
+    border-radius:20px;
+
+    background:white;
+
+    transition:.3s;
+
+    box-shadow:0 8px 24px rgba(15,23,42,.05);
+
+}
+
+.stat-card:hover{
+
+    transform:translateY(-6px);
+
+    box-shadow:0 18px 35px rgba(37,99,235,.12);
+
+}
+
+.stat-icon{
+
+    width:70px;
+
+    height:70px;
+
+    border-radius:18px;
+
+    background:#eff6ff;
+
+    color:#2563eb;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:34px;
+
+}
+
+/* Table */
+
+.table{
+
+    vertical-align:middle;
+
+}
+
+.table thead{
+
+    background:#f8fafc;
+
+}
+
+.table thead th{
+
+    font-weight:600;
+
+    border:none;
+
+}
+
+.table tbody td{
+
+    border-color:#eef2f7;
+
+}
+
+/* Buttons */
+
+.btn-primary{
+
+    border-radius:10px;
+
+    padding:8px 18px;
+
+}
+
+
+
+/* Logo */
+
+.sidebar-logo{
+
+    width:90px;
+
+    height:auto;
+
+    display:block;
+
+    margin:auto;
+
+    border-radius:12px;
+
+    background:white;
+
+    padding:8px;
+
+}

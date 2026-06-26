@@ -8,7 +8,9 @@ from app.models.supplier import Supplier
 from app.schemas.supplier import (
     SupplierCreate,
     SupplierResponse,
-    SupplierListResponse
+    SupplierListResponse,
+    SupplierApprovalRequest,
+    SupplierRejectionRequest
 )
 
 router = APIRouter(
@@ -325,11 +327,13 @@ def register_supplier(
 @router.put("/{supplier_id}/approve")
 def approve_supplier(
     supplier_id: int,
-    remarks: str,
+    approval: SupplierApprovalRequest,
     db: Session = Depends(get_db)
 ):
 
-    supplier = db.query(Supplier).filter(
+    supplier = db.query(
+        Supplier
+    ).filter(
         Supplier.id == supplier_id
     ).first()
 
@@ -340,7 +344,7 @@ def approve_supplier(
         )
 
     supplier.registration_status = "APPROVED"
-    supplier.approval_remarks = remarks
+    supplier.approval_remarks = approval.remarks
 
     db.commit()
     db.refresh(supplier)
@@ -351,15 +355,19 @@ def approve_supplier(
         "status": supplier.registration_status
     }
 
+    
+
 
 @router.put("/{supplier_id}/reject")
 def reject_supplier(
     supplier_id: int,
-    remarks: str,
+    rejection: SupplierRejectionRequest,
     db: Session = Depends(get_db)
 ):
 
-    supplier = db.query(Supplier).filter(
+    supplier = db.query(
+        Supplier
+    ).filter(
         Supplier.id == supplier_id
     ).first()
 
@@ -370,7 +378,7 @@ def reject_supplier(
         )
 
     supplier.registration_status = "REJECTED"
-    supplier.approval_remarks = remarks
+    supplier.approval_remarks = rejection.remarks
 
     db.commit()
     db.refresh(supplier)
@@ -380,3 +388,5 @@ def reject_supplier(
         "supplier_id": supplier.id,
         "status": supplier.registration_status
     }
+
+    

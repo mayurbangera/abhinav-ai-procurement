@@ -255,3 +255,15 @@ class SupplierListResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+    
+class SupplierApprovalRequest(BaseModel):
+
+    remarks: str
+
+
+class SupplierRejectionRequest(BaseModel):
+
+    remarks: str
+    
+    
+    
