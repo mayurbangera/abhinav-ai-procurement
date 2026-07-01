@@ -1,0 +1,361 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}
+Supplier Management
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <!-- Header -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold">
+                Supplier Management
+            </h2>
+
+            <p class="text-muted mb-0">
+                Search, review and manage suppliers.
+            </p>
+
+        </div>
+
+        <div class="d-flex gap-2">
+
+        <a
+            href="/dashboard/suppliers/export"
+            class="btn btn-success">
+
+            <i class="bi bi-file-earmark-excel"></i>
+
+            Export Excel
+
+        </a>
+
+        <a
+            href="/dashboard/"
+            class="btn btn-outline-primary">
+
+            <i class="bi bi-speedometer2"></i>
+
+            Dashboard
+
+        </a>
+
+    </div>
+
+    </div>
+
+    <!-- Search & Filters -->
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+
+        <div class="card-body">
+
+            <form
+                method="GET"
+                action="/dashboard/suppliers">
+
+                <div class="row g-3 align-items-end">
+
+                    <!-- Company Search -->
+
+                    <div class="col-md-4">
+
+                        <label class="form-label fw-semibold">
+
+                            Company
+
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            name="search"
+                            value="{{ search }}"
+                            placeholder="Search company...">
+
+                    </div>
+
+                    <!-- Status -->
+
+                    <div class="col-md-2">
+
+                        <label class="form-label fw-semibold">
+
+                            Status
+
+                        </label>
+
+                        <select
+                            class="form-select"
+                            name="status">
+
+                            <option value=""
+                                {% if status == "" %}selected{% endif %}>
+                                All
+                            </option>
+
+                            <option value="PENDING"
+                                {% if status == "PENDING" %}selected{% endif %}>
+                                Pending
+                            </option>
+
+                            <option value="APPROVED"
+                                {% if status == "APPROVED" %}selected{% endif %}>
+                                Approved
+                            </option>
+
+                            <option value="REJECTED"
+                                {% if status == "REJECTED" %}selected{% endif %}>
+                                Rejected
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Category -->
+
+                    <div class="col-md-2">
+
+                        <label class="form-label fw-semibold">
+
+                            Category
+
+                        </label>
+
+                        <select
+                            class="form-select"
+                            name="category">
+
+                            <option value=""
+                                {% if category == "" %}selected{% endif %}>
+                                All
+                            </option>
+
+                            <option value="Civil"
+                                {% if category == "Civil" %}selected{% endif %}>
+                                Civil
+                            </option>
+
+                            <option value="Steel"
+                                {% if category == "Steel" %}selected{% endif %}>
+                                Steel
+                            </option>
+
+                            <option value="Electrical"
+                                {% if category == "Electrical" %}selected{% endif %}>
+                                Electrical
+                            </option>
+
+                            <option value="Cement"
+                                {% if category == "Cement" %}selected{% endif %}>
+                                Cement
+                            </option>
+
+                            <option value="Food"
+                                {% if category == "Food" %}selected{% endif %}>
+                                Food
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Search Button -->
+
+                    <div class="col-md-2">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100">
+
+                            <i class="bi bi-search"></i>
+
+                            Search
+
+                        </button>
+
+                    </div>
+
+                    <!-- Reset Button -->
+
+                    <div class="col-md-2">
+
+                        <a
+                            href="/dashboard/suppliers"
+                            class="btn btn-secondary w-100">
+
+                            <i class="bi bi-arrow-clockwise"></i>
+
+                            Reset
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <!-- Supplier Table -->
+
+    <div class="card shadow-sm border-0 rounded-4">
+
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+
+            <h5 class="fw-bold mb-0">
+
+                Supplier List
+
+            </h5>
+
+            <span class="badge bg-primary">
+
+                {{ suppliers|length }} Suppliers
+
+            </span>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>ID</th>
+                            <th>Company</th>
+                            <th>Category</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th class="text-center">Action</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for supplier in suppliers %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ supplier.id }}
+
+                            </td>
+
+                            <td>
+
+                                <strong>
+
+                                    {{ supplier.company_name }}
+
+                                </strong>
+
+                            </td>
+
+                            <td>
+
+                                {{ supplier.supplier_category or "-" }}
+
+                            </td>
+
+                            <td>
+
+                                {{ supplier.contact_person_name }}
+
+                            </td>
+
+                            <td>
+
+                                {% if supplier.registration_status == "APPROVED" %}
+
+                                    <span class="badge bg-success">
+
+                                        Approved
+
+                                    </span>
+
+                                {% elif supplier.registration_status == "REJECTED" %}
+
+                                    <span class="badge bg-danger">
+
+                                        Rejected
+
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-warning text-dark">
+
+                                        Pending
+
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <a
+                                    href="/dashboard/suppliers/{{ supplier.id }}"
+                                    class="btn btn-sm btn-primary">
+
+                                    <i class="bi bi-eye"></i>
+
+                                    View
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% else %}
+
+                        <tr>
+
+                            <td colspan="6" class="text-center py-5">
+
+                                <h6 class="text-muted">
+
+                                    No suppliers found.
+
+                                </h6>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

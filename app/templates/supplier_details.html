@@ -8,6 +8,8 @@ Supplier Details
 
 <div class="container-fluid">
 
+    <!-- Header -->
+
     <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
@@ -16,7 +18,7 @@ Supplier Details
                 Supplier Details
             </h2>
 
-            <p class="text-muted">
+            <p class="text-muted mb-0">
                 Review supplier information before approval.
             </p>
 
@@ -26,123 +28,466 @@ Supplier Details
             href="/dashboard/"
             class="btn btn-outline-primary">
 
-            ← Back to Dashboard
+            <i class="bi bi-arrow-left"></i>
+
+            Back to Dashboard
 
         </a>
 
     </div>
 
-    <div class="card shadow-sm border-0 rounded-4">
+<!-- ========================= -->
+<!-- Company Information -->
+<!-- ========================= -->
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+
+    <div class="card-header bg-white">
+
+        <h4 class="fw-bold mb-0">
+
+            🏢 Company Information
+
+        </h4>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Company Name
+                </label>
+
+                <p>{{ supplier.company_name }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Principal Business
+                </label>
+
+                <p>{{ supplier.principal_business or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    GST Number
+                </label>
+
+                <p>{{ supplier.gst_number }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Company Address
+                </label>
+
+                <p>{{ supplier.registered_address or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Supplier Category
+                </label>
+
+                <p>{{ supplier.supplier_category or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Material Types
+                </label>
+
+                <p>{{ supplier.material_types or "-" }}</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+    <!-- ========================= -->
+<!-- Contact Information -->
+<!-- ========================= -->
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+
+    <div class="card-header bg-white">
+
+        <h4 class="fw-bold mb-0">
+
+            📞 Contact Information
+
+        </h4>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Contact Person
+                </label>
+
+                <p>{{ supplier.contact_person_name }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Email Address
+                </label>
+
+                <p>{{ supplier.contact_person_email or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    WhatsApp Number
+                </label>
+
+                <p>{{ supplier.whatsapp_number }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Registration Status
+                </label>
+
+                <p>
+
+                    {% if supplier.registration_status == "APPROVED" %}
+
+                        <span class="badge bg-success">
+
+                            Approved
+
+                        </span>
+
+                    {% elif supplier.registration_status == "REJECTED" %}
+
+                        <span class="badge bg-danger">
+
+                            Rejected
+
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge bg-warning text-dark">
+
+                            Pending
+
+                        </span>
+
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- Banking Information -->
+<!-- ========================= -->
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+
+    <div class="card-header bg-white">
+
+        <h4 class="fw-bold mb-0">
+
+            🏦 Banking Information
+
+        </h4>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Bank Name
+                </label>
+
+                <p>{{ supplier.bank_name or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Account Holder Name
+                </label>
+
+                <p>{{ supplier.beneficiary_name or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Account Number
+                </label>
+
+                <p>{{ supplier.bank_account_number or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    IFSC Code
+                </label>
+
+                <p>{{ supplier.bank_ifsc or "-" }}</p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    Branch Name
+                </label>
+
+                <p>{{ supplier.branch_name or "-" }}</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ========================= -->
+<!-- MSME Information -->
+<!-- ========================= -->
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+
+    <div class="card-header bg-white">
+
+        <h4 class="fw-bold mb-0">
+
+            🏭 MSME Information
+
+        </h4>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    MSME Registered
+                </label>
+
+                <p>
+
+                    {% if supplier.is_msme %}
+
+                        <span class="badge bg-success">
+
+                            YES
+
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge bg-secondary">
+
+                            NO
+
+                        </span>
+
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+                    MSME Number
+                </label>
+
+                <p>{{ supplier.msme_number or "-" }}</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- Customer Reference -->
+<!-- ========================= -->
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+
+    <div class="card-header bg-white">
+
+        <h4 class="fw-bold mb-0">
+
+            🤝 Customer Reference
+
+        </h4>
+
+    </div>
+
+    <div class="card-body">
+
+        <label class="fw-bold">
+
+            Customer Reference
+
+        </label>
+
+        <p class="mb-0">
+
+            {{ supplier.references or "-" }}
+
+        </p>
+
+    </div>
+
+</div>
+
+
+    <!-- ========================= -->
+    <!-- Documents -->
+    <!-- ========================= -->
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+
+        <div class="card-header bg-white">
+
+            <h4 class="fw-bold mb-0">
+
+                📄 Documents
+
+            </h4>
+
+        </div>
 
         <div class="card-body">
 
             <div class="row">
 
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6">
 
-                    <label class="fw-bold">
-                        Company Name
-                    </label>
+                    <div class="border rounded-3 p-3 h-100">
 
-                    <p>{{ supplier.company_name }}</p>
+                        <h6 class="fw-bold">
 
-                </div>
+                            GST Certificate
 
-                <div class="col-md-6 mb-3">
+                        </h6>
 
-                    <label class="fw-bold">
-                        Principal Business
-                    </label>
+                        {% if supplier.gst_certificate_path %}
 
-                    <p>{{ supplier.principal_business }}</p>
+                            <a
+                                href="/{{ supplier.gst_certificate_path }}"
+                                target="_blank"
+                                class="btn btn-outline-primary btn-sm mt-2">
 
-                </div>
+                                <i class="bi bi-eye"></i>
 
-                <div class="col-md-6 mb-3">
+                                View GST Certificate
 
-                    <label class="fw-bold">
-                        GST Number
-                    </label>
-
-                    <p>{{ supplier.gst_number }}</p>
-
-                </div>
-
-                <div class="col-md-6 mb-3">
-
-                    <label class="fw-bold">
-                        Contact Person
-                    </label>
-
-                    <p>{{ supplier.contact_person_name }}</p>
-
-                </div>
-
-                <div class="col-md-6 mb-3">
-
-                    <label class="fw-bold">
-                        Email
-                    </label>
-
-                    <p>{{ supplier.contact_person_email }}</p>
-
-                </div>
-
-                <div class="col-md-6 mb-3">
-
-                    <label class="fw-bold">
-                        Mobile
-                    </label>
-
-                    <p>{{ supplier.whatsapp_number }}</p>
-
-                </div>
-
-                <div class="col-md-6 mb-3">
-
-                    <label class="fw-bold">
-                        Supplier Category
-                    </label>
-
-                    <p>{{ supplier.supplier_category }}</p>
-
-                </div>
-
-                <div class="col-md-6 mb-3">
-
-                    <label class="fw-bold">
-                        Status
-                    </label>
-
-                    <p>
-
-                        {% if supplier.registration_status == "APPROVED" %}
-
-                            <span class="badge bg-success">
-
-                                Approved
-
-                            </span>
-
-                        {% elif supplier.registration_status == "REJECTED" %}
-
-                            <span class="badge bg-danger">
-
-                                Rejected
-
-                            </span>
+                            </a>
 
                         {% else %}
 
-                            <span class="badge bg-warning text-dark">
+                            <span class="badge bg-danger">
 
-                                Pending
+                                Not Uploaded
 
                             </span>
 
                         {% endif %}
 
-                    </p>
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="border rounded-3 p-3 h-100">
+
+                        <h6 class="fw-bold">
+
+                            MSME Certificate
+
+                        </h6>
+
+                        {% if supplier.msme_certificate_path %}
+
+                            <a
+                                href="/{{ supplier.msme_certificate_path }}"
+                                target="_blank"
+                                class="btn btn-outline-primary btn-sm mt-2">
+
+                                <i class="bi bi-eye"></i>
+
+                                View MSME Certificate
+
+                            </a>
+
+                        {% else %}
+
+                            <span class="badge bg-secondary">
+
+                                Not Uploaded
+
+                            </span>
+
+                        {% endif %}
+
+                    </div>
 
                 </div>
 
@@ -152,27 +497,156 @@ Supplier Details
 
     </div>
 
-    <div class="mt-4 d-flex gap-3">
 
-        <button
-            id="approve-btn"
-            class="btn btn-success">
+<!-- ========================= -->
+<!-- Authorization -->
+<!-- ========================= -->
 
-            <i class="bi bi-check-circle"></i>
+<div class="card shadow-sm border-0 rounded-4 mb-4">
 
-            Approve Supplier
+    <div class="card-header bg-white">
 
-        </button>
+        <h4 class="fw-bold mb-0">
 
-        <button
-            id="reject-btn"
-            class="btn btn-danger">
+            👤 Authorization
 
-            <i class="bi bi-x-circle"></i>
+        </h4>
 
-            Reject Supplier
+    </div>
 
-        </button>
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+
+                    Authorized Person
+
+                </label>
+
+                <p>
+
+                    {{ supplier.authorized_person_name or "-" }}
+
+                </p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+
+                    Designation
+
+                </label>
+
+                <p>
+
+                    {{ supplier.designation or "-" }}
+
+                </p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+
+                    Declaration Accepted
+
+                </label>
+
+                <p>
+
+                    {% if supplier.declaration_accepted %}
+
+                        <span class="badge bg-success">
+
+                            YES
+
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge bg-danger">
+
+                            NO
+
+                        </span>
+
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+            <div class="col-md-6 mb-3">
+
+                <label class="fw-bold">
+
+                    Registration Date
+
+                </label>
+
+                <p>
+
+                    {{ supplier.created_at }}
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+    <!-- ========================= -->
+    <!-- Approval -->
+    <!-- ========================= -->
+
+    <div class="card shadow-sm border-0 rounded-4">
+
+        <div class="card-header bg-white">
+
+            <h4 class="fw-bold mb-0">
+
+                ✅ Approval Decision
+
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="d-flex gap-3">
+
+                <button
+                    id="approve-btn"
+                    class="btn btn-success">
+
+                    <i class="bi bi-check-circle"></i>
+
+                    Approve Supplier
+
+                </button>
+
+                <button
+                    id="reject-btn"
+                    class="btn btn-danger">
+
+                    <i class="bi bi-x-circle"></i>
+
+                    Reject Supplier
+
+                </button>
+
+            </div>
+
+        </div>
 
     </div>
 

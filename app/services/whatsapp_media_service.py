@@ -1,13 +1,15 @@
-import requests
 import os
 import uuid
+import requests
 
 from app.config.settings import (
     META_ACCESS_TOKEN
 )
 
 
-def get_media_url(media_id: str):
+def get_media_url(
+    media_id: str
+):
 
     url = (
         f"https://graph.facebook.com/v23.0/"
@@ -55,8 +57,26 @@ def download_media(
 
     response.raise_for_status()
 
+    content_type = response.headers.get(
+        "Content-Type",
+        ""
+    ).lower()
+
+    extension_map = {
+        "application/pdf": ".pdf",
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/png": ".png"
+    }
+
+    file_extension = extension_map.get(
+        content_type,
+        ".bin"
+    )
+
     filename = (
-        str(uuid.uuid4()) + ".bin"
+        str(uuid.uuid4())
+        + file_extension
     )
 
     file_path = os.path.join(
@@ -73,4 +93,5 @@ def download_media(
             response.content
         )
 
-    return file_path
+    # Convert Windows path separators to URL separators
+    return file_path.replace("\\", "/")

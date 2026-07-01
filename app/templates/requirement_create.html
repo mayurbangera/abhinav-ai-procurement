@@ -1,0 +1,165 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}
+Create Requirement
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold">
+                Create Requirement
+            </h2>
+
+            <p class="text-muted mb-0">
+                Create a new procurement requirement.
+            </p>
+
+        </div>
+
+        <a
+            href="/dashboard/requirements"
+            class="btn btn-outline-primary">
+
+            <i class="bi bi-arrow-left"></i>
+
+            Back
+
+        </a>
+
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4">
+
+        <div class="card-body">
+
+            <form
+                id="requirementForm">
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">
+                            Project Name
+                        </label>
+
+                        <input
+                            id="project_name"
+                            class="form-control"
+                            required>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">
+                            Site Name
+                        </label>
+
+                        <input
+                            id="site_name"
+                            class="form-control"
+                            required>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">
+                            Requested By
+                        </label>
+
+                        <input
+                            id="requested_by"
+                            class="form-control"
+                            value="Avdhut Chakradhar"
+                            required>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">
+                            Priority
+                        </label>
+
+                        <select
+                            id="priority"
+                            class="form-select">
+
+                            <option>HIGH</option>
+                            <option selected>MEDIUM</option>
+                            <option>LOW</option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">
+                            Required Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="required_date"
+                            class="form-control"
+                            required>
+
+                    </div>
+
+                    <div class="col-md-12">
+
+                        <label class="form-label fw-semibold">
+                            Purpose
+                        </label>
+
+                        <textarea
+                            id="purpose"
+                            class="form-control"
+                            rows="3"
+                            required></textarea>
+
+                    </div>
+
+                    <div class="col-md-12">
+
+                        <label class="form-label fw-semibold">
+                            Remarks
+                        </label>
+
+                        <textarea
+                            id="remarks"
+                            class="form-control"
+                            rows="2"></textarea>
+
+                    </div>
+
+                </div>
+
+                <hr>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary">
+
+                    Save Requirement
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}
+Requirement Management
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold">
+                Requirement Management
+            </h2>
+
+            <p class="text-muted mb-0">
+                Create and manage procurement requirements.
+            </p>
+
+        </div>
+
+        <a
+            href="/dashboard/requirements/create"
+            class="btn btn-primary">
+
+            <i class="bi bi-plus-circle"></i>
+
+            New Requirement
+
+        </a>
+
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+
+        <div class="card-body">
+
+            <form method="GET">
+
+                <div class="row g-3">
+
+                    <div class="col-md-5">
+
+                        <label class="form-label fw-semibold">
+                            Search
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            name="search"
+                            value="{{ search }}"
+                            placeholder="Requirement No / Project">
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <label class="form-label fw-semibold">
+                            Status
+                        </label>
+
+                        <select
+                            class="form-select"
+                            name="status">
+
+                            <option value="">All</option>
+                            <option value="DRAFT">Draft</option>
+                            <option value="SUBMITTED">Submitted</option>
+                            <option value="RFQ_SENT">RFQ Sent</option>
+                            <option value="COMPLETED">Completed</option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-2 d-grid">
+
+                        <label>&nbsp;</label>
+
+                        <button
+                            class="btn btn-primary">
+
+                            Search
+
+                        </button>
+
+                    </div>
+
+                    <div class="col-md-2 d-grid">
+
+                        <label>&nbsp;</label>
+
+                        <a
+                            href="/dashboard/requirements"
+                            class="btn btn-secondary">
+
+                            Reset
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4">
+
+        <div class="card-header bg-white d-flex justify-content-between">
+
+            <h5 class="fw-bold mb-0">
+
+                Requirement List
+
+            </h5>
+
+            <span class="badge bg-primary">
+
+                {{ requirements|length }} Requirements
+
+            </span>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>No.</th>
+
+                            <th>Project</th>
+
+                            <th>Site</th>
+
+                            <th>Priority</th>
+
+                            <th>Required Date</th>
+
+                            <th>Status</th>
+
+                            <th>Action</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    {% for requirement in requirements %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ requirement.requirement_number }}
+
+                            </td>
+
+                            <td>
+
+                                {{ requirement.project_name }}
+
+                            </td>
+
+                            <td>
+
+                                {{ requirement.site_name }}
+
+                            </td>
+
+                            <td>
+
+                                {{ requirement.priority }}
+
+                            </td>
+
+                            <td>
+
+                                {{ requirement.required_date }}
+
+                            </td>
+
+                            <td>
+
+                                <span class="badge bg-warning text-dark">
+
+                                    {{ requirement.status }}
+
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                <a
+                                    href="/dashboard/requirements/{{ requirement.id }}"
+                                    class="btn btn-sm btn-primary">
+
+                                    View
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                    {% else %}
+
+                        <tr>
+
+                            <td colspan="7" class="text-center py-5">
+
+                                No Requirements Found
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

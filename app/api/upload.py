@@ -79,7 +79,7 @@ def upload_gst_certificate(
 
     return {
         "message": "GST Certificate Uploaded Successfully",
-        "file_path": file_path,
+        "file_path": file_path.replace("\\", "/"),
         "file_size_bytes": file_size
     }
 
@@ -135,6 +135,6 @@ def upload_msme_certificate(
 
     return {
         "message": "MSME Certificate Uploaded Successfully",
-        "file_path": file_path,
+        "file_path": file_path.replace("\\", "/"),
         "file_size_bytes": file_size
     }
