@@ -51,7 +51,7 @@ def requirement_management(
 
 
 # =====================================================
-# Create Page
+# Create Requirement Page
 # =====================================================
 
 @router.get(
@@ -86,24 +86,26 @@ def requirement_details(
 ):
 
     requirement = RequirementService.get_requirement_by_id(
-        db,
-        requirement_id
+        db=db,
+        requirement_id=requirement_id
     )
 
     if not requirement:
-
         raise HTTPException(
             status_code=404,
             detail="Requirement not found"
         )
-        
+
+    materials = requirement.materials or []
 
     return templates.TemplateResponse(
         request=request,
         name="requirement_details.html",
         context={
             "request": request,
-            "requirement": requirement
+            "requirement": requirement,
+            "materials": materials,
+            "material_count": len(materials),
+            "can_generate_rfq": len(materials) > 0
         }
     )
-    

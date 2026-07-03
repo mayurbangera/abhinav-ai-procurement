@@ -8,132 +8,893 @@ Requirement Details
 
 <div class="container-fluid">
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Header -->
 
-<div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
 
-<h2 class="fw-bold">
+        <div>
 
-{{ requirement.requirement_number }}
+            <h2 class="fw-bold">
+                {{ requirement.requirement_number }}
+            </h2>
 
-</h2>
+            <p class="text-muted mb-0">
+                Requirement Details
+            </p>
 
-<p class="text-muted">
+        </div>
 
-Requirement Details
+        <div class="d-flex gap-2">
 
-</p>
+            <a
+                href="/dashboard/requirements"
+                class="btn btn-outline-secondary">
+
+                Back
+
+            </a>
+
+            <button
+                class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#materialModal">
+
+                + Add Material
+
+            </button>
+
+            <button
+                class="btn btn-success"
+                {% if not can_generate_rfq %}
+                disabled
+                {% endif %}>
+
+                Generate RFQ
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- Requirement Information -->
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+
+        <div class="card-header bg-white">
+
+            <h5 class="mb-0">
+
+                General Information
+
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <strong>Project</strong>
+
+                    <p>{{ requirement.project_name }}</p>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <strong>Site</strong>
+
+                    <p>{{ requirement.site_name }}</p>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <strong>Requested By</strong>
+
+                    <p>{{ requirement.requested_by }}</p>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <strong>Priority</strong>
+
+                    <p>{{ requirement.priority }}</p>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <strong>Required Date</strong>
+
+                    <p>{{ requirement.required_date }}</p>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <strong>Status</strong>
+
+                    <p>
+
+                        <span class="badge bg-primary">
+
+                            {{ requirement.status }}
+
+                        </span>
+
+                    </p>
+
+                </div>
+
+                <div class="col-md-12 mb-3">
+
+                    <strong>Purpose</strong>
+
+                    <p>{{ requirement.purpose }}</p>
+
+                </div>
+
+                <div class="col-md-12">
+
+                    <strong>Remarks</strong>
+
+                    <p>{{ requirement.remarks or "-" }}</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+        <!-- ===========================
+         Materials
+    ============================ -->
+
+    <div class="card shadow-sm border-0 rounded-4">
+
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+
+            <div>
+
+                <h5 class="mb-1">
+
+                    Materials
+
+                </h5>
+
+                <small class="text-muted">
+
+                    {{ material_count }} Material(s)
+
+                </small>
+
+            </div>
+
+            <button
+                class="btn btn-primary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#materialModal">
+
+                + Add Material
+
+            </button>
+
+        </div>
+
+        <div class="card-body">
+
+            {% if materials %}
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>#</th>
+
+                            <th>Material</th>
+
+                            <th>Category</th>
+
+                            <th>Quantity</th>
+
+                            <th>Unit</th>
+
+                            <th>Preferred Brand</th>
+
+                            <th>Status</th>
+
+                            <th width="170">
+
+                                Actions
+
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for material in materials %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ loop.index }}
+
+                            </td>
+
+                            <td>
+
+                                <strong>
+
+                                    {{ material.material_name }}
+
+                                </strong>
+
+                                {% if material.specification %}
+
+                                <br>
+
+                                <small class="text-muted">
+
+                                    {{ material.specification }}
+
+                                </small>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+
+                                {{ material.category or "-" }}
+
+                            </td>
+
+                            <td>
+
+                                {{ material.quantity }}
+
+                            </td>
+
+                            <td>
+
+                                {{ material.unit }}
+
+                            </td>
+
+                            <td>
+
+                                {{ material.preferred_brand or "-" }}
+
+                            </td>
+
+                            <td>
+
+                                <span class="badge bg-secondary">
+
+                                    Draft
+
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                <div class="btn-group">
+
+                                    <button
+                                        class="btn btn-sm btn-outline-primary edit-material-btn"
+
+                                        data-id="{{ material.id }}"
+                                        data-material-name="{{ material.material_name }}"
+                                        data-category="{{ material.category or '' }}"
+                                        data-specification="{{ material.specification or '' }}"
+                                        data-preferred-brand="{{ material.preferred_brand or '' }}"
+                                        data-alternate-brand="{{ material.alternate_brand_allowed }}"
+                                        data-quantity="{{ material.quantity }}"
+                                        data-unit="{{ material.unit }}"
+                                        data-delivery-location="{{ material.delivery_location or '' }}"
+                                        data-purpose="{{ material.purpose or '' }}"
+                                        data-additional-requirements="{{ material.additional_requirements or '' }}"
+                                        data-remarks="{{ material.remarks or '' }}">
+
+                                        Edit
+
+                                    </button>
+
+                                    <button
+                                        class="btn btn-sm btn-outline-danger">
+
+                                        Delete
+
+                                    </button>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% else %}
+
+            <div class="text-center py-5">
+
+                <img
+                    src="https://cdn-icons-png.flaticon.com/512/7486/7486740.png"
+                    width="90"
+                    class="mb-3">
+
+                <h5>
+
+                    No Materials Added
+
+                </h5>
+
+                <p class="text-muted">
+
+                    Start by adding procurement materials for this requirement.
+
+                </p>
+
+                <button
+                    class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#materialModal">
+
+                    + Add First Material
+
+                </button>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <!-- =======================================================
+     Add Material Modal
+======================================================== -->
+
+<div
+    class="modal fade"
+    id="materialModal"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+
+        <div class="modal-content" style="max-height:95vh;">
+
+            <form
+                id="materialForm"
+                autocomplete="off">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+
+                        Add Material
+
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+
+                    </button>
+
+                </div>
+
+                <div
+                    class="modal-body"
+                    style="max-height:70vh;overflow-y:auto;">
+
+                    <div class="row">
+
+                        <!-- Material Name -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+
+                                Material Name *
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                name="material_name"
+                                placeholder="Enter Material Name"
+                                required>
+
+                        </div>
+
+                        <!-- Category -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+
+                                Category
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                name="category"
+                                list="categoryList"
+                                placeholder="Search, select or type a new category (Optional)">
+
+                            <datalist id="categoryList">
+
+                                <option value="Steel">
+
+                                <option value="Cement">
+
+                                <option value="Electrical">
+
+                                <option value="Hardware">
+
+                                <option value="Safety">
+
+                                <option value="Paint">
+
+                                <option value="Plumbing">
+
+                                <option value="Consumables">
+
+                                <option value="Equipment">
+
+                            </datalist>
+
+                        </div>
+
+                        <!-- Quantity -->
+
+                        <div class="col-md-4 mb-3">
+
+                            <label class="form-label">
+
+                                Quantity *
+
+                            </label>
+
+                            <input
+                                type="number"
+                                min="0.001"
+                                step="0.001"
+                                class="form-control"
+                                name="quantity"
+                                required>
+
+                        </div>
+
+                        <!-- Unit -->
+
+                        <div class="col-md-4 mb-3">
+
+                            <label class="form-label">
+
+                                Unit *
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                list="unitList"
+                                name="unit"
+                                placeholder="Search, select or type a new unit"
+                                required>
+
+                            <datalist id="unitList">
+
+                                <option value="Nos">
+
+                                <option value="Kg">
+
+                                <option value="MT">
+
+                                <option value="Bag">
+
+                                <option value="Litre">
+
+                                <option value="Meter">
+
+                                <option value="Sq.ft">
+
+                                <option value="Cu.m">
+
+                                <option value="Bundle">
+
+                                <option value="Roll">
+
+                            </datalist>
+
+                        </div>
+
+                        <!-- Brand -->
+
+                        <div class="col-md-4 mb-3">
+
+                            <label class="form-label">
+
+                                Preferred Brand
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                list="brandList"
+                                name="preferred_brand"
+                                placeholder="Search, select or type a new brand">
+
+                            <datalist id="brandList">
+
+                                <option value="JSW">
+
+                                <option value="UltraTech">
+
+                                <option value="ACC">
+
+                                <option value="Dalmia">
+
+                                <option value="Tata">
+
+                            </datalist>
+
+                        </div>
+
+                        <!-- Specification -->
+
+                        <div class="col-md-12 mb-3">
+
+                            <label class="form-label">
+
+                                Technical Specification
+
+                            </label>
+
+                            <textarea
+                                class="form-control"
+                                rows="3"
+                                name="specification"
+                                placeholder="Optional"></textarea>
+
+                        </div>
+
+                        <!-- Delivery -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+
+                                Delivery Location
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                name="delivery_location">
+
+                        </div>
+
+                        <!-- Alternate Brand -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label d-block">
+
+                                Alternate Brand
+
+                            </label>
+
+                            <div class="form-check form-switch">
+
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    checked
+                                    name="alternate_brand_allowed">
+
+                                <label class="form-check-label">
+
+                                    Alternate Brand Allowed
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Purpose -->
+
+                        <div class="col-md-12 mb-3">
+
+                            <label class="form-label">
+
+                                Purpose
+
+                            </label>
+
+                            <textarea
+                                class="form-control"
+                                rows="3"
+                                name="purpose"
+                                placeholder="Purpose of this material"></textarea>
+
+                        </div>
+
+                        <!-- Additional Requirements -->
+
+                        <div class="col-md-12 mb-3">
+
+                            <label class="form-label">
+
+                                Additional Requirements
+
+                            </label>
+
+                            <textarea
+                                class="form-control"
+                                rows="4"
+                                name="additional_requirements"
+                                placeholder="Include any additional technical details, certifications, vendor instructions, special requirements, site conditions or anything not covered above."></textarea>
+
+                        </div>
+
+                        <!-- Remarks -->
+
+                        <div class="col-md-12">
+
+                            <label class="form-label">
+
+                                Remarks
+
+                            </label>
+
+                            <textarea
+                                class="form-control"
+                                rows="3"
+                                name="remarks"></textarea>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+
+                        Cancel
+
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+
+                        Save & Continue
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
 
 </div>
 
-<a
-href="/dashboard/requirements"
-class="btn btn-outline-primary">
+<script>
 
-Back
+let editingMaterialId = null;
 
-</a>
+const modalTitle = document.querySelector(".modal-title");
 
-</div>
+document.querySelectorAll(".edit-material-btn").forEach(button => {
 
-<div class="card shadow-sm border-0 rounded-4">
+    button.addEventListener("click", function () {
 
-<div class="card-body">
+        editingMaterialId = this.dataset.id;
 
-<div class="row">
+        modalTitle.innerText = "Edit Material";
 
-<div class="col-md-6">
+        document.querySelector(
+            "#materialForm button[type='submit']"
+        ).innerText = "Update Material";
 
-<strong>Project</strong>
+        materialForm.material_name.value = this.dataset.materialName;
+        materialForm.category.value = this.dataset.category;
+        materialForm.specification.value = this.dataset.specification;
+        materialForm.preferred_brand.value = this.dataset.preferredBrand;
+        materialForm.quantity.value = this.dataset.quantity;
+        materialForm.unit.value = this.dataset.unit;
+        materialForm.delivery_location.value = this.dataset.deliveryLocation;
+        materialForm.purpose.value = this.dataset.purpose;
+        materialForm.additional_requirements.value = this.dataset.additionalRequirements;
+        materialForm.remarks.value = this.dataset.remarks;
 
-<p>{{ requirement.project_name }}</p>
+        materialForm.alternate_brand_allowed.checked =
+            this.dataset.alternateBrand.toLowerCase() === "true";
 
-</div>
+        new bootstrap.Modal(
+            document.getElementById("materialModal")
+        ).show();
 
-<div class="col-md-6">
+    });
 
-<strong>Site</strong>
+});
 
-<p>{{ requirement.site_name }}</p>
 
-</div>
+const materialForm = document.getElementById("materialForm");
 
-<div class="col-md-6">
+const materialModal = document.getElementById("materialModal");
 
-<strong>Requested By</strong>
+materialModal.addEventListener("hidden.bs.modal", () => {
 
-<p>{{ requirement.requested_by }}</p>
+    editingMaterialId = null;
 
-</div>
+    modalTitle.innerText = "Add Material";
 
-<div class="col-md-6">
+    materialForm.reset();
 
-<strong>Priority</strong>
+    document.querySelector(
+        "#materialForm button[type='submit']"
+    ).innerText = "Save & Continue";
 
-<p>{{ requirement.priority }}</p>
+});
 
-</div>
+if (materialForm) {
 
-<div class="col-md-6">
+    materialForm.addEventListener("submit", async function (e) {
 
-<strong>Required Date</strong>
+        e.preventDefault();
 
-<p>{{ requirement.required_date }}</p>
+        const formData = new FormData(materialForm);
 
-</div>
+        const payload = {
 
-<div class="col-md-6">
+            material_name:
+                formData.get("material_name"),
 
-<strong>Status</strong>
+            category:
+                formData.get("category") || null,
 
-<p>{{ requirement.status }}</p>
+            specification:
+                formData.get("specification") || null,
 
-</div>
+            preferred_brand:
+                formData.get("preferred_brand") || null,
 
-<div class="col-md-12">
+            alternate_brand_allowed:
+                formData.get("alternate_brand_allowed") === "on",
 
-<strong>Purpose</strong>
+            quantity:
+                Number(formData.get("quantity")),
 
-<p>{{ requirement.purpose }}</p>
+            unit:
+                formData.get("unit"),
 
-</div>
+            delivery_location:
+                formData.get("delivery_location") || null,
 
-<div class="col-md-12">
+            purpose:
+                formData.get("purpose") || null,
 
-<strong>Remarks</strong>
+            additional_requirements:
+                formData.get("additional_requirements") || null,
 
-<p>{{ requirement.remarks or "-" }}</p>
+            remarks:
+                formData.get("remarks") || null
 
-</div>
+        };
 
-</div>
+        try {
 
-<hr>
+            const url = editingMaterialId
+                ? `/requirements/materials/${editingMaterialId}`
+                : "/requirements/{{ requirement.id }}/materials";
 
-<div class="d-flex gap-2">
+            const method = editingMaterialId
+                ? "PUT"
+                : "POST";
 
-<button
-class="btn btn-primary"
-disabled>
+            const response = await fetch(
 
-Add Materials
+                url,
 
-</button>
+                {
 
-<button
-class="btn btn-success"
-disabled>
+                    method: method,
 
-Generate RFQ
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
 
-</button>
+                    body: JSON.stringify(payload)
 
-</div>
+                }
 
-</div>
+            );
 
-</div>
+            if (!response.ok) {
+
+                const error = await response.json();
+
+                alert(error.detail || "Unable to save material.");
+
+                return;
+
+            }
+
+            alert(
+
+                editingMaterialId
+                    ? "Material Updated Successfully."
+                    : "Material Added Successfully."
+
+            );
+
+            editingMaterialId = null;
+
+            materialForm.reset();
+
+            window.location.reload();
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            alert("Something went wrong.");
+
+        }
+
+    });
+
+}
+
+</script>
 
 </div>
 
 {% endblock %}
+

@@ -5,7 +5,8 @@ from sqlalchemy import (
     DateTime,
     Text,
     Boolean,
-    ForeignKey
+    ForeignKey,
+    Numeric
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -25,22 +26,34 @@ class RequirementMaterial(Base):
     requirement_id = Column(
         Integer,
         ForeignKey("requirements.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
-    
+
     requirement = relationship(
         "Requirement",
         back_populates="materials"
     )
 
+    # ============================
+    # Material Information
+    # ============================
+
     material_name = Column(
         String(255),
-        nullable=False
+        nullable=False,
+        index=True
+    )
+
+    category = Column(
+        String(100),
+        nullable=True,
+        index=True
     )
 
     specification = Column(
         Text,
-        nullable=False
+        nullable=True
     )
 
     preferred_brand = Column(
@@ -50,11 +63,12 @@ class RequirementMaterial(Base):
 
     alternate_brand_allowed = Column(
         Boolean,
-        default=True
+        default=True,
+        nullable=False
     )
 
     quantity = Column(
-        String(50),
+        Numeric(18, 3),
         nullable=False
     )
 
@@ -65,17 +79,21 @@ class RequirementMaterial(Base):
 
     delivery_location = Column(
         String(255),
-        nullable=False
+        nullable=True
     )
-
-    
 
     purpose = Column(
         Text,
-        nullable=False
+        nullable=True
     )
 
-    additional_specification = Column(
+    # =====================================================
+    # Free text field
+    # Stores any procurement requirement that does not fit
+    # into predefined columns.
+    # =====================================================
+
+    additional_requirements = Column(
         Text,
         nullable=True
     )

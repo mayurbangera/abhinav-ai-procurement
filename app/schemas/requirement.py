@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, field_validator
@@ -71,21 +72,23 @@ class RequirementMaterialCreate(BaseModel):
 
     material_name: str
 
-    specification: str
+    category: Optional[str] = None
+
+    specification: Optional[str] = None
 
     preferred_brand: Optional[str] = None
 
     alternate_brand_allowed: bool = True
 
-    quantity: str
+    quantity: Decimal
 
     unit: str
 
-    delivery_location: str
+    delivery_location: Optional[str] = None
 
-    purpose: str
+    purpose: Optional[str] = None
 
-    additional_specification: Optional[str] = None
+    additional_requirements: Optional[str] = None
 
     remarks: Optional[str] = None
 
@@ -100,28 +103,6 @@ class RequirementMaterialCreate(BaseModel):
 
         return value
 
-    @field_validator("specification")
-    @classmethod
-    def validate_specification(cls, value):
-
-        value = value.strip()
-
-        if len(value) < 5:
-            raise ValueError("Specification is required.")
-
-        return value
-
-    @field_validator("quantity")
-    @classmethod
-    def validate_quantity(cls, value):
-
-        value = value.strip()
-
-        if len(value) == 0:
-            raise ValueError("Quantity is required.")
-
-        return value
-
     @field_validator("unit")
     @classmethod
     def validate_unit(cls, value):
@@ -133,25 +114,35 @@ class RequirementMaterialCreate(BaseModel):
 
         return value
 
-    @field_validator("delivery_location")
+    @field_validator("quantity")
     @classmethod
-    def validate_delivery_location(cls, value):
+    def validate_quantity(cls, value):
 
-        value = value.strip()
-
-        if len(value) < 2:
-            raise ValueError("Delivery location is required.")
+        if value <= 0:
+            raise ValueError("Quantity must be greater than zero.")
 
         return value
 
-    @field_validator("purpose")
+    @field_validator(
+        "category",
+        "specification",
+        "preferred_brand",
+        "delivery_location",
+        "purpose",
+        "additional_requirements",
+        "remarks",
+        mode="before"
+    )
     @classmethod
-    def validate_material_purpose(cls, value):
+    def clean_optional_fields(cls, value):
 
-        value = value.strip()
+        if value is None:
+            return None
 
-        if len(value) < 5:
-            raise ValueError("Purpose is required.")
+        value = str(value).strip()
+
+        if value == "":
+            return None
 
         return value
 
@@ -203,21 +194,23 @@ class RequirementMaterialResponse(BaseModel):
 
     material_name: str
 
-    specification: str
+    category: Optional[str]
+
+    specification: Optional[str]
 
     preferred_brand: Optional[str]
 
     alternate_brand_allowed: bool
 
-    quantity: str
+    quantity: Decimal
 
     unit: str
 
-    delivery_location: str
+    delivery_location: Optional[str]
 
-    purpose: str
+    purpose: Optional[str]
 
-    additional_specification: Optional[str]
+    additional_requirements: Optional[str]
 
     remarks: Optional[str]
 
