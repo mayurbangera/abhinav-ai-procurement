@@ -18,6 +18,11 @@ from app.api.dashboard import router as dashboard_router
 
 from app.api.requirement import router as requirement_router
 from app.api.requirement_dashboard import router as requirement_dashboard_router
+from app.api.material_master import router as material_master_router
+
+from app.api.material_master_dashboard import (
+    router as material_master_dashboard_router
+)
 
 app = FastAPI(
     title="Abhinav Group Supplier Registration System"
@@ -46,6 +51,8 @@ app.include_router(whatsapp_router)
 app.include_router(dashboard_router)
 app.include_router(requirement_router)
 app.include_router(requirement_dashboard_router)
+app.include_router(material_master_router)
+app.include_router(material_master_dashboard_router)
 
 
 @app.get("/")
