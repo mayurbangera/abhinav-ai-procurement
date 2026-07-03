@@ -6,16 +6,23 @@ from app.database.dependencies import get_db
 from app.schemas.requirement import (
     RequirementCreate,
     RequirementResponse,
-    RequirementListResponse
+    RequirementListResponse,
+    RequirementMaterialCreate,
+    RequirementMaterialResponse
 )
 
 from app.services.requirement_service import RequirementService
+from app.services.requirement_material_service import RequirementMaterialService
 
 router = APIRouter(
     prefix="/requirements",
     tags=["Requirements"]
 )
 
+
+# =====================================================
+# Requirement
+# =====================================================
 
 @router.post(
     "/",
@@ -70,3 +77,58 @@ def get_requirement(
         )
 
     return requirement
+
+
+# =====================================================
+# Requirement Materials
+# =====================================================
+
+@router.post(
+    "/{requirement_id}/materials",
+    response_model=RequirementMaterialResponse
+)
+def add_material(
+    requirement_id: int,
+    material: RequirementMaterialCreate,
+    db: Session = Depends(get_db)
+):
+
+    requirement = RequirementService.get_requirement_by_id(
+        db,
+        requirement_id
+    )
+
+    if not requirement:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Requirement not found"
+        )
+
+    return RequirementMaterialService.create_material(
+
+        db=db,
+
+        requirement_id=requirement_id,
+
+        material_name=material.material_name,
+
+        specification=material.specification,
+
+        preferred_brand=material.preferred_brand,
+
+        alternate_brand_allowed=material.alternate_brand_allowed,
+
+        quantity=material.quantity,
+
+        unit=material.unit,
+
+        delivery_location=material.delivery_location,
+
+        purpose=material.purpose,
+
+        additional_specification=material.additional_specification,
+
+        remarks=material.remarks
+
+    )

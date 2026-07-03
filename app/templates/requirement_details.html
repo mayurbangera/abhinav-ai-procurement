@@ -1,0 +1,139 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}
+Requirement Details
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+
+<h2 class="fw-bold">
+
+{{ requirement.requirement_number }}
+
+</h2>
+
+<p class="text-muted">
+
+Requirement Details
+
+</p>
+
+</div>
+
+<a
+href="/dashboard/requirements"
+class="btn btn-outline-primary">
+
+Back
+
+</a>
+
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+
+<div class="card-body">
+
+<div class="row">
+
+<div class="col-md-6">
+
+<strong>Project</strong>
+
+<p>{{ requirement.project_name }}</p>
+
+</div>
+
+<div class="col-md-6">
+
+<strong>Site</strong>
+
+<p>{{ requirement.site_name }}</p>
+
+</div>
+
+<div class="col-md-6">
+
+<strong>Requested By</strong>
+
+<p>{{ requirement.requested_by }}</p>
+
+</div>
+
+<div class="col-md-6">
+
+<strong>Priority</strong>
+
+<p>{{ requirement.priority }}</p>
+
+</div>
+
+<div class="col-md-6">
+
+<strong>Required Date</strong>
+
+<p>{{ requirement.required_date }}</p>
+
+</div>
+
+<div class="col-md-6">
+
+<strong>Status</strong>
+
+<p>{{ requirement.status }}</p>
+
+</div>
+
+<div class="col-md-12">
+
+<strong>Purpose</strong>
+
+<p>{{ requirement.purpose }}</p>
+
+</div>
+
+<div class="col-md-12">
+
+<strong>Remarks</strong>
+
+<p>{{ requirement.remarks or "-" }}</p>
+
+</div>
+
+</div>
+
+<hr>
+
+<div class="d-flex gap-2">
+
+<button
+class="btn btn-primary"
+disabled>
+
+Add Materials
+
+</button>
+
+<button
+class="btn btn-success"
+disabled>
+
+Generate RFQ
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database.dependencies import get_db
-from app.services.requirement_dashboard_service import RequirementDashboardService
+
+from app.services.requirement_service import RequirementService
 
 router = APIRouter(
     prefix="/dashboard/requirements",
@@ -17,7 +18,7 @@ templates = Jinja2Templates(
 
 
 # =====================================================
-# Requirement Management
+# Requirement List
 # =====================================================
 
 @router.get(
@@ -31,7 +32,7 @@ def requirement_management(
     status: str = ""
 ):
 
-    requirements = RequirementDashboardService.get_all_requirements(
+    requirements = RequirementService.get_all_requirements(
         db=db,
         search=search,
         status=status
@@ -50,7 +51,7 @@ def requirement_management(
 
 
 # =====================================================
-# Create Requirement Page
+# Create Page
 # =====================================================
 
 @router.get(
@@ -68,3 +69,41 @@ def create_requirement_page(
             "request": request
         }
     )
+
+
+# =====================================================
+# Requirement Details
+# =====================================================
+
+@router.get(
+    "/{requirement_id}",
+    response_class=HTMLResponse
+)
+def requirement_details(
+    requirement_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+
+    requirement = RequirementService.get_requirement_by_id(
+        db,
+        requirement_id
+    )
+
+    if not requirement:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Requirement not found"
+        )
+        
+
+    return templates.TemplateResponse(
+        request=request,
+        name="requirement_details.html",
+        context={
+            "request": request,
+            "requirement": requirement
+        }
+    )
+    

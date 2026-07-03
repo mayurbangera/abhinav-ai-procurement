@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         form.addEventListener(
             "submit",
-            saveRequirement
+            createRequirement
         );
 
     }
@@ -14,11 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-async function saveRequirement(event) {
+async function createRequirement(event) {
 
     event.preventDefault();
 
-    const body = {
+    const data = {
 
         project_name:
             document.getElementById("project_name").value,
@@ -44,7 +44,9 @@ async function saveRequirement(event) {
     };
 
     const response = await fetch(
+
         "/requirements/",
+
         {
 
             method: "POST",
@@ -55,23 +57,25 @@ async function saveRequirement(event) {
 
             },
 
-            body: JSON.stringify(body)
+            body: JSON.stringify(data)
 
         }
+
     );
 
     if (response.ok) {
 
-        alert("Requirement Created Successfully.");
+        const requirement = await response.json();
 
         window.location.href =
-            "/dashboard/requirements";
+            "/dashboard/requirements/" +
+            requirement.id;
 
     }
 
     else {
 
-        alert("Failed to create requirement.");
+        alert("Unable to create requirement.");
 
     }
 

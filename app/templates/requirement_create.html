@@ -16,7 +16,7 @@ Create Requirement
                 Create Requirement
             </h2>
 
-            <p class="text-muted mb-0">
+            <p class="text-muted">
                 Create a new procurement requirement.
             </p>
 
@@ -38,14 +38,13 @@ Create Requirement
 
         <div class="card-body">
 
-            <form
-                id="requirementForm">
+            <form id="requirementForm">
 
                 <div class="row g-3">
 
                     <div class="col-md-6">
 
-                        <label class="form-label fw-semibold">
+                        <label class="form-label">
                             Project Name
                         </label>
 
@@ -58,7 +57,7 @@ Create Requirement
 
                     <div class="col-md-6">
 
-                        <label class="form-label fw-semibold">
+                        <label class="form-label">
                             Site Name
                         </label>
 
@@ -71,21 +70,20 @@ Create Requirement
 
                     <div class="col-md-6">
 
-                        <label class="form-label fw-semibold">
+                        <label class="form-label">
                             Requested By
                         </label>
 
                         <input
                             id="requested_by"
                             class="form-control"
-                            value="Avdhut Chakradhar"
-                            required>
+                            value="Avdhut Chakradhar">
 
                     </div>
 
                     <div class="col-md-6">
 
-                        <label class="form-label fw-semibold">
+                        <label class="form-label">
                             Priority
                         </label>
 
@@ -93,9 +91,21 @@ Create Requirement
                             id="priority"
                             class="form-select">
 
-                            <option>HIGH</option>
-                            <option selected>MEDIUM</option>
-                            <option>LOW</option>
+                            <option value="HIGH">HIGH</option>
+
+                            <option
+                                value="MEDIUM"
+                                selected>
+
+                                MEDIUM
+
+                            </option>
+
+                            <option value="LOW">
+
+                                LOW
+
+                            </option>
 
                         </select>
 
@@ -103,13 +113,13 @@ Create Requirement
 
                     <div class="col-md-6">
 
-                        <label class="form-label fw-semibold">
+                        <label class="form-label">
                             Required Date
                         </label>
 
                         <input
-                            type="date"
                             id="required_date"
+                            type="date"
                             class="form-control"
                             required>
 
@@ -117,28 +127,28 @@ Create Requirement
 
                     <div class="col-md-12">
 
-                        <label class="form-label fw-semibold">
+                        <label class="form-label">
                             Purpose
                         </label>
 
                         <textarea
                             id="purpose"
-                            class="form-control"
                             rows="3"
+                            class="form-control"
                             required></textarea>
 
                     </div>
 
                     <div class="col-md-12">
 
-                        <label class="form-label fw-semibold">
+                        <label class="form-label">
                             Remarks
                         </label>
 
                         <textarea
                             id="remarks"
-                            class="form-control"
-                            rows="2"></textarea>
+                            rows="2"
+                            class="form-control"></textarea>
 
                     </div>
 
@@ -161,5 +171,7 @@ Create Requirement
     </div>
 
 </div>
+
+<script src="/static/js/requirement.js"></script>
 
 {% endblock %}

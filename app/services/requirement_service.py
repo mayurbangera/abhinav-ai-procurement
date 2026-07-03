@@ -5,6 +5,10 @@ from app.models.requirement import Requirement
 
 class RequirementService:
 
+    # =====================================================
+    # Create Requirement
+    # =====================================================
+
     @staticmethod
     def create_requirement(
         db: Session,
@@ -19,7 +23,9 @@ class RequirementService:
 
         last_requirement = (
             db.query(Requirement)
-            .order_by(Requirement.id.desc())
+            .order_by(
+                Requirement.id.desc()
+            )
             .first()
         )
 
@@ -30,7 +36,7 @@ class RequirementService:
 
         requirement_number = f"REQ{next_number:06d}"
 
-        new_requirement = Requirement(
+        requirement = Requirement(
 
             requirement_number=requirement_number,
 
@@ -40,7 +46,7 @@ class RequirementService:
 
             requested_by=requested_by,
 
-            priority=priority.upper(),
+            priority=priority,
 
             required_date=required_date,
 
@@ -52,24 +58,56 @@ class RequirementService:
 
         )
 
-        db.add(new_requirement)
-        db.commit()
-        db.refresh(new_requirement)
+        db.add(requirement)
 
-        return new_requirement
+        db.commit()
+
+        db.refresh(requirement)
+
+        return requirement
+
+
+    # =====================================================
+    # Requirement List
+    # =====================================================
 
     @staticmethod
     def get_all_requirements(
-        db: Session
+        db: Session,
+        search: str = "",
+        status: str = ""
     ):
 
+        query = db.query(
+            Requirement
+        )
+
+        if search:
+
+            query = query.filter(
+                Requirement.project_name.ilike(
+                    f"%{search}%"
+                )
+            )
+
+        if status:
+
+            query = query.filter(
+                Requirement.status == status
+            )
+
         return (
-            db.query(Requirement)
+            query
             .order_by(
                 Requirement.created_at.desc()
             )
             .all()
         )
+
+
+    # =====================================================
+    # Requirement Details
+    # =====================================================
 
     @staticmethod
     def get_requirement_by_id(
@@ -78,7 +116,9 @@ class RequirementService:
     ):
 
         return (
-            db.query(Requirement)
+            db.query(
+                Requirement
+            )
             .filter(
                 Requirement.id == requirement_id
             )
