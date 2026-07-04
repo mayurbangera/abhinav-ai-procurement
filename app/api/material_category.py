@@ -32,19 +32,9 @@ def create_category(
     db: Session = Depends(get_db)
 ):
 
-    duplicate = (
-
-        db.query(
-            MaterialCategoryService
-            .__dict__["__globals__"]["MaterialCategory"]
-        )
-
-        .filter_by(
-            category_name=category.category_name
-        )
-
-        .first()
-
+    duplicate = MaterialCategoryService.check_duplicate_category(
+        db=db,
+        category_name=category.category_name
     )
 
     if duplicate:
