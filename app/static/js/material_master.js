@@ -84,6 +84,56 @@ materialModalElement.addEventListener(
 console.log(addMaterialBtn);
 
 // ======================================================
+// Edit Material
+// ======================================================
+
+document.querySelectorAll(".editMaterialBtn").forEach(button => {
+
+    button.addEventListener("click", function () {
+
+        console.log("Edit clicked");
+        console.log(this.dataset);
+
+        editingMaterialId = this.dataset.id;
+
+        modalTitle.innerText = "Edit Material";
+
+        saveMaterialBtn.innerText = "Update Material";
+
+        document.getElementById("materialName").value =
+            this.dataset.name;
+
+        document.getElementById("categoryId").value =
+            this.dataset.category;
+
+        document.getElementById("subcategoryId").value =
+            this.dataset.subcategory;
+
+        document.getElementById("description").value =
+            this.dataset.description;
+
+        document.getElementById("defaultUnit").value =
+            this.dataset.unit;
+
+        document.getElementById("preferredBrand").value =
+            this.dataset.brand;
+
+        document.getElementById("gstPercentage").value =
+            this.dataset.gst;
+
+        document.getElementById("hsnCode").value =
+            this.dataset.hsn;
+
+        document.getElementById("isActive").checked =
+            this.dataset.active === "true";
+
+        materialModal.show();
+
+    });
+
+});
+
+// ======================================================
 // Build Material Payload
 // ======================================================
 
@@ -214,9 +264,17 @@ saveMaterialBtn.addEventListener("click", async function () {
 
     try {
 
-        const response = await fetch(`${API_BASE}/`, {
+        const url = editingMaterialId
+            ? `${API_BASE}/${editingMaterialId}`
+            : `${API_BASE}/`;
 
-            method: "POST",
+        const method = editingMaterialId
+            ? "PUT"
+            : "POST";
+
+        const response = await fetch(url, {
+
+            method: method,
 
             headers: {
                 "Content-Type": "application/json"
@@ -224,7 +282,7 @@ saveMaterialBtn.addEventListener("click", async function () {
 
             body: JSON.stringify(payload)
 
-        });
+   });
 
         const data = await response.json();
 
@@ -240,11 +298,21 @@ saveMaterialBtn.addEventListener("click", async function () {
 
         }
 
-        alert("Material created successfully.");
+        alert(
+            editingMaterialId
+            ? "Material updated successfully."
+            : "Material created successfully."
+        );
 
         materialModal.hide();
 
         materialForm.reset();
+
+        editingMaterialId = null;
+
+        modalTitle.innerText = "Add Material";
+
+        saveMaterialBtn.innerText = "Save Material";
 
         location.reload();
 
@@ -261,5 +329,65 @@ saveMaterialBtn.addEventListener("click", async function () {
         saveMaterialBtn.innerHTML = "Save Material";
 
     }
+
+});
+
+console.log(document.querySelectorAll(".editMaterialBtn"));
+
+// ======================================================
+// Delete Material
+// ======================================================
+
+document.querySelectorAll(".deleteMaterialBtn").forEach(button => {
+
+    button.addEventListener("click", async function () {
+
+        console.log("Delete clicked");
+
+        const materialId = this.dataset.id;
+        const materialName = this.dataset.name;
+
+        const confirmed = confirm(
+            `Are you sure you want to delete "${materialName}"?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+
+            const response = await fetch(
+                `${API_BASE}/${materialId}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+
+                alert(data.detail || "Unable to delete material.");
+
+                return;
+
+            }
+
+            alert(data.message);
+
+            this.closest("tr").remove();
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            alert("Something went wrong while deleting.");
+
+        }
+
+    });
 
 });
