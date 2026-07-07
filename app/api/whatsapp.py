@@ -160,35 +160,7 @@ def process_message(
                 "GST Number already registered"
             }
 
-    # PAN Validation
-    if current_step == "pan_number":
 
-        if not validate_pan(answer):
-            return {
-                "error":
-                "Invalid PAN Number. Example: ABCDE1234F"
-            }
-
-        existing_pan = db.query(
-            Supplier
-        ).filter(
-            Supplier.pan_number == answer.upper()
-        ).first()
-
-        if existing_pan:
-            return {
-                "error":
-                "PAN Number already registered"
-            }
-
-    # Mobile Validation
-    if current_step == "contact_person_mobile":
-
-        if not validate_mobile(answer):
-            return {
-                "error":
-                "Mobile number must be exactly 10 digits"
-            }
 
     # WhatsApp Validation
     if current_step == "whatsapp_number":
@@ -239,28 +211,7 @@ def process_message(
 
         data[current_step] = None
 
-        if current_step == "reference_2_company":
 
-            current_index = REGISTRATION_STEPS.index(
-                current_step
-            )
-
-            next_index = current_index + 3
-
-            next_step = REGISTRATION_STEPS[next_index]
-
-            conversation.collected_data = data
-            conversation.current_step = next_step
-
-            db.commit()
-            db.refresh(conversation)
-
-            return {
-                "saved_field": current_step,
-                "saved_value": None,
-                "next_step": next_step,
-                "next_question": QUESTION_MAP[next_step]
-            }
 
     elif current_step != "declaration_accepted":
 

@@ -257,43 +257,27 @@ def register_supplier(
             detail="GST Number already registered"
         )
 
-    existing_pan = db.query(Supplier).filter(
-        Supplier.pan_number == supplier.pan_number
-    ).first()
-
-    if existing_pan:
-        raise HTTPException(
-            status_code=400,
-            detail="PAN Number already registered"
-        )
 
     new_supplier = Supplier(
         company_name=supplier.company_name,
         principal_business=supplier.principal_business,
-        business_classification=supplier.business_classification,
 
         gst_number=supplier.gst_number,
-        pan_number=supplier.pan_number,
-
-        date_of_incorporation=supplier.date_of_incorporation,
 
         registered_address=supplier.registered_address,
-        godown_address=supplier.godown_address,
 
         contact_person_name=supplier.contact_person_name,
-        contact_person_mobile=supplier.contact_person_mobile,
         contact_person_email=supplier.contact_person_email,
 
-        telephone_number=supplier.telephone_number,
         whatsapp_number=supplier.whatsapp_number,
 
         supplier_category=supplier.supplier_category,
         material_types=supplier.material_types,
 
-        bank_account_name=supplier.bank_account_name,
+        bank_name=supplier.bank_name,
+        beneficiary_name=supplier.beneficiary_name,
         bank_account_number=supplier.bank_account_number,
         bank_ifsc=supplier.bank_ifsc,
-        bank_name=supplier.bank_name,
         branch_name=supplier.branch_name,
 
         is_msme=supplier.is_msme,
@@ -302,11 +286,7 @@ def register_supplier(
 
         gst_certificate_path=supplier.gst_certificate_path,
 
-        customer_reference_1=supplier.customer_reference_1,
-        customer_reference_2=supplier.customer_reference_2,
-        customer_reference_3=supplier.customer_reference_3,
-        customer_reference_4=supplier.customer_reference_4,
-        customer_reference_5=supplier.customer_reference_5,
+        references=supplier.references,
 
         authorized_person_name=supplier.authorized_person_name,
         designation=supplier.designation,
