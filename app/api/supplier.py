@@ -323,6 +323,22 @@ def approve_supplier(
             detail="Supplier not found"
         )
 
+    if not supplier.supplier_code:
+        last_vendor = db.query(Supplier).filter(
+            Supplier.supplier_code.isnot(None)
+        ).order_by(Supplier.id.desc()).first()
+        
+        if last_vendor and last_vendor.supplier_code and last_vendor.supplier_code.startswith("VEND"):
+            try:
+                last_num = int(last_vendor.supplier_code.replace("VEND", ""))
+                new_num = last_num + 1
+            except ValueError:
+                new_num = 1
+        else:
+            new_num = 1
+            
+        supplier.supplier_code = f"VEND{new_num:06d}"
+
     supplier.registration_status = "APPROVED"
     supplier.approval_remarks = approval.remarks
 
