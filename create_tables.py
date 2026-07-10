@@ -10,6 +10,10 @@ from app.models.material_master import MaterialMaster
 from app.models.material_category import MaterialCategory
 from app.models.material_subcategory import MaterialSubCategory
 
+from app.models.rfq import RFQ
+from app.models.rfq_item import RFQItem
+from app.models.rfq_vendor import RFQVendor
+
 print("Creating tables...")
 
 Base.metadata.create_all(bind=engine)

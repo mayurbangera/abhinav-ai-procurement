@@ -1,0 +1,242 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ rfq.rfq_number }} — RFQ Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">{{ rfq.rfq_number }}</h2>
+            <p class="text-muted mb-0">{{ rfq.project_name }} &mdash; {{ rfq.site_name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/dashboard/rfq" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            {% if rfq.status == "Draft" %}
+            <button class="btn btn-success" id="sendRfqBtn">
+                <i class="bi bi-whatsapp me-1"></i> Send to Vendors
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+
+            <!-- RFQ Info Card -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-info-circle text-primary me-2"></i>RFQ Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="text-muted small">RFQ Number</div>
+                            <div class="fw-semibold text-primary">{{ rfq.rfq_number }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Status</div>
+                            <div>
+                                {% if rfq.status == "Draft" %}
+                                    <span class="badge bg-secondary">Draft</span>
+                                {% elif rfq.status == "Sent" %}
+                                    <span class="badge bg-primary">Sent</span>
+                                {% elif rfq.status == "Approved" %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif rfq.status == "Quotation Received" %}
+                                    <span class="badge bg-info text-dark">Quotation Received</span>
+                                {% elif rfq.status == "Negotiation" %}
+                                    <span class="badge bg-warning text-dark">Negotiation</span>
+                                {% elif rfq.status == "Closed" %}
+                                    <span class="badge bg-dark">Closed</span>
+                                {% elif rfq.status == "Cancelled" %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">{{ rfq.status }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Created By</div>
+                            <div class="fw-semibold">{{ rfq.created_by }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Project</div>
+                            <div>{{ rfq.project_name }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Site</div>
+                            <div>{{ rfq.site_name }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Delivery Location</div>
+                            <div>{{ rfq.delivery_location }}</div>
+                        </div>
+                        {% if rfq.payment_terms %}
+                        <div class="col-md-4">
+                            <div class="text-muted small">Payment Terms</div>
+                            <div>{{ rfq.payment_terms }}</div>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-4">
+                            <div class="text-muted small">Created On</div>
+                            <div>{{ rfq.created_at.strftime("%d %B %Y, %I:%M %p") if rfq.created_at else "-" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Materials Card -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-boxes text-primary me-2"></i>Materials Required</h5>
+                </div>
+                <div class="card-body">
+                    {% for item in items %}
+                    <div class="border rounded-3 p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ item.material_name }}</h6>
+                                <span class="badge bg-light text-dark border">{{ item.material_category }}</span>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">{{ item.quantity }} {{ item.unit }}</div>
+                                {% if item.brand_required %}
+                                <div class="text-muted small">Brand: {{ item.brand_required }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Fields — auto-rendered for ANY material type -->
+                        {% if item.dynamic_fields %}
+                        <hr class="my-2">
+                        <div class="row g-2 mt-1">
+                            {% for key, value in item.dynamic_fields.items() %}
+                            <div class="col-md-3">
+                                <div class="text-muted small">{{ key.replace("_", " ").title() }}</div>
+                                <div class="small fw-semibold">{{ value }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if item.remarks %}
+                        <div class="mt-2 small text-muted fst-italic">
+                            <i class="bi bi-chat-left-text me-1"></i>{{ item.remarks }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No items found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- WhatsApp Preview Card -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-whatsapp text-success me-2"></i>WhatsApp Message Preview</h5>
+                    <button class="btn btn-sm btn-outline-success" id="loadPreviewBtn">
+                        <i class="bi bi-arrow-repeat me-1"></i> Load Preview
+                    </button>
+                </div>
+                <div class="card-body">
+                    <pre id="waPreview" class="bg-light rounded-3 p-3 small" style="white-space: pre-wrap; min-height:80px;">
+Click "Load Preview" to see the WhatsApp message that was / will be sent.</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Vendors + Status -->
+        <div class="col-lg-4">
+
+            <!-- Status Update -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-arrow-repeat text-primary me-2"></i>Update Status</h5>
+                </div>
+                <div class="card-body">
+                    <select class="form-select mb-2" id="statusSelect">
+                        {% for s in ["Draft","Pending Approval","Approved","Sent","Vendor Viewed","Vendor Responded","Quotation Received","Negotiation","Closed","Cancelled"] %}
+                        <option value="{{ s }}" {% if rfq.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary w-100" id="updateStatusBtn">Update Status</button>
+                </div>
+            </div>
+
+            <!-- Vendors Card -->
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-people text-primary me-2"></i>Vendors Notified</h5>
+                </div>
+                <div class="card-body">
+                    {% for ev in enriched_vendors %}
+                    <div class="d-flex align-items-center gap-2 mb-2 p-2 border rounded-3">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold small">{{ ev.vendor.company_name if ev.vendor else "Unknown Vendor" }}</div>
+                            <div class="text-muted small">📞 {{ ev.vendor.whatsapp_number if ev.vendor else "-" }}</div>
+                        </div>
+                        <div>
+                            {% if ev.rv.whatsapp_status == "Sent" %}
+                                <span class="badge bg-success">Sent</span>
+                            {% elif ev.rv.whatsapp_status == "Failed" %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted small">No vendors attached yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+const rfqId = {{ rfq.id }};
+
+document.getElementById('loadPreviewBtn').addEventListener('click', async () => {
+    const res = await fetch(`/rfqs/${rfqId}/preview`);
+    const data = await res.json();
+    document.getElementById('waPreview').textContent = data.message || 'Preview not available.';
+});
+
+document.getElementById('updateStatusBtn').addEventListener('click', async () => {
+    const status = document.getElementById('statusSelect').value;
+    const res = await fetch(`/rfqs/${rfqId}/status`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status })
+    });
+    if (res.ok) {
+        alert(`Status updated to: ${status}`);
+        window.location.reload();
+    } else {
+        alert('Failed to update status.');
+    }
+});
+
+{% if rfq.status == "Draft" %}
+document.getElementById('sendRfqBtn').addEventListener('click', async () => {
+    if (!confirm('Send this RFQ to all attached vendors via WhatsApp?')) return;
+    const res = await fetch(`/rfqs/${rfqId}/send`, { method: 'POST' });
+    const data = await res.json();
+    if (data.sent_to) {
+        alert(`✅ RFQ sent to ${data.sent_to.length} vendor(s) successfully.`);
+        window.location.reload();
+    } else {
+        alert(data.error || 'Send failed. Ensure vendors are attached.');
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

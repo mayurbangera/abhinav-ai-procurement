@@ -1,0 +1,110 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}RFQ Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">RFQ Management</h2>
+            <p class="text-muted mb-0">Manage and track all Request for Quotations.</p>
+        </div>
+        <a href="/dashboard/rfq/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Create New RFQ
+        </a>
+    </div>
+
+    <!-- Status Filter Tabs -->
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="fw-semibold text-muted me-2">Filter:</span>
+                <a href="/dashboard/rfq/" class="btn btn-sm {% if status_filter == '' %}btn-primary{% else %}btn-outline-secondary{% endif %}">All</a>
+                <a href="/dashboard/rfq/?status=Draft" class="btn btn-sm {% if status_filter == 'Draft' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Draft</a>
+                <a href="/dashboard/rfq/?status=Pending Approval" class="btn btn-sm {% if status_filter == 'Pending Approval' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Pending Approval</a>
+                <a href="/dashboard/rfq/?status=Approved" class="btn btn-sm {% if status_filter == 'Approved' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Approved</a>
+                <a href="/dashboard/rfq/?status=Sent" class="btn btn-sm {% if status_filter == 'Sent' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Sent</a>
+                <a href="/dashboard/rfq/?status=Quotation Received" class="btn btn-sm {% if status_filter == 'Quotation Received' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Quotation Received</a>
+                <a href="/dashboard/rfq/?status=Negotiation" class="btn btn-sm {% if status_filter == 'Negotiation' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Negotiation</a>
+                <a href="/dashboard/rfq/?status=Closed" class="btn btn-sm {% if status_filter == 'Closed' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Closed</a>
+                <a href="/dashboard/rfq/?status=Cancelled" class="btn btn-sm {% if status_filter == 'Cancelled' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Cancelled</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- RFQ Table -->
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">RFQ List</h5>
+            <span class="badge bg-primary">{{ rfqs|length }} RFQs</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>RFQ Number</th>
+                            <th>Project</th>
+                            <th>Site</th>
+                            <th>Delivery Location</th>
+                            <th>Created By</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rfq in rfqs %}
+                        <tr>
+                            <td><strong class="text-primary">{{ rfq.rfq_number }}</strong></td>
+                            <td>{{ rfq.project_name }}</td>
+                            <td>{{ rfq.site_name }}</td>
+                            <td>{{ rfq.delivery_location }}</td>
+                            <td>{{ rfq.created_by }}</td>
+                            <td>
+                                {% if rfq.status == "Draft" %}
+                                    <span class="badge bg-secondary">Draft</span>
+                                {% elif rfq.status == "Sent" %}
+                                    <span class="badge bg-primary">Sent</span>
+                                {% elif rfq.status == "Approved" %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif rfq.status == "Quotation Received" %}
+                                    <span class="badge bg-info text-dark">Quotation Received</span>
+                                {% elif rfq.status == "Negotiation" %}
+                                    <span class="badge bg-warning text-dark">Negotiation</span>
+                                {% elif rfq.status == "Closed" %}
+                                    <span class="badge bg-dark">Closed</span>
+                                {% elif rfq.status == "Cancelled" %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">{{ rfq.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">
+                                {{ rfq.created_at.strftime("%d %b %Y") if rfq.created_at else "-" }}
+                            </td>
+                            <td class="text-center">
+                                <a href="/dashboard/rfq/{{ rfq.id }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <h6 class="text-muted">No RFQs found.</h6>
+                                <a href="/dashboard/rfq/create" class="btn btn-primary btn-sm mt-2">
+                                    Create First RFQ
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
