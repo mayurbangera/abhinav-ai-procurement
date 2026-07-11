@@ -3,7 +3,8 @@ from sqlalchemy import (
     Integer,
     String,
     DateTime,
-    Text
+    Text,
+    ForeignKey
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -23,7 +24,15 @@ class RFQ(Base):
     status = Column(String(50), default="Draft")
     
     created_by = Column(String(255), nullable=False)
-    
+
+    # Optional link back to the source Requirement this RFQ was generated from.
+    # Nullable for backward compatibility: manually created RFQs leave this NULL.
+    requirement_id = Column(
+        Integer,
+        ForeignKey("requirements.id"),
+        nullable=True
+    )
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()
@@ -37,3 +46,7 @@ class RFQ(Base):
 
     items = relationship("RFQItem", back_populates="rfq", cascade="all, delete-orphan")
     vendors = relationship("RFQVendor", back_populates="rfq", cascade="all, delete-orphan")
+
+    # One-directional link to the source requirement (no back_populates to avoid
+    # touching the Requirement model). Used only for traceability display.
+    requirement = relationship("Requirement")

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from datetime import date
 
 from app.database.dependencies import get_db
@@ -323,27 +324,22 @@ def approve_supplier(
             detail="Supplier not found"
         )
 
-    if not supplier.supplier_code:
-        last_vendor = db.query(Supplier).filter(
-            Supplier.supplier_code.isnot(None)
-        ).order_by(Supplier.id.desc()).first()
-        
-        if last_vendor and last_vendor.supplier_code and last_vendor.supplier_code.startswith("VEND"):
-            try:
-                last_num = int(last_vendor.supplier_code.replace("VEND", ""))
-                new_num = last_num + 1
-            except ValueError:
-                new_num = 1
-        else:
-            new_num = 1
-            
-        supplier.supplier_code = f"VEND{new_num:06d}"
+    try:
+        if not supplier.supplier_code:
+            next_val = db.execute(text("SELECT nextval('supplier_code_seq')")).scalar()
+            supplier.supplier_code = f"VEND{next_val:06d}"
 
-    supplier.registration_status = "APPROVED"
-    supplier.approval_remarks = approval.remarks
+        supplier.registration_status = "APPROVED"
+        supplier.approval_remarks = approval.remarks
 
-    db.commit()
-    db.refresh(supplier)
+        db.commit()
+        db.refresh(supplier)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while approving the supplier. Please try again."
+        )
 
     return {
         "message": "Supplier Approved Successfully",

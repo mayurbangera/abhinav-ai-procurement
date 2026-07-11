@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.dependencies import get_db
 from app.schemas.rfq import (
     RFQCreate, RFQResponse, RFQDetailResponse,
-    RFQStatusUpdate,
+    RFQStatusUpdate, RFQUpdate,
     RFQItemCreate, RFQItemResponse,
     RFQVendorAdd, RFQVendorResponse
 )
@@ -25,6 +25,25 @@ def create_rfq(
     db: Session = Depends(get_db)
 ):
     return RFQService.create_rfq(db, data.model_dump())
+
+
+@router.post(
+    "/generate-from-requirement/{requirement_id}",
+    response_model=RFQResponse
+)
+def generate_rfq_from_requirement(
+    requirement_id: int,
+    db: Session = Depends(get_db)
+):
+    """Generate a Draft RFQ by snapshotting an existing Requirement."""
+    try:
+        rfq = RFQService.generate_rfq_from_requirement(db, requirement_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if not rfq:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    return rfq
 
 
 @router.get("/", response_model=list[RFQResponse])
@@ -56,6 +75,21 @@ def update_rfq_status(
     if not rfq:
         raise HTTPException(status_code=404, detail="RFQ not found")
     return {"rfq_id": rfq_id, "status": rfq.status}
+
+
+@router.put("/{rfq_id}", response_model=RFQResponse)
+def update_rfq(
+    rfq_id: int,
+    payload: RFQUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update RFQ-specific editable fields (payment terms)."""
+    rfq = RFQService.update_rfq_details(
+        db, rfq_id, payment_terms=payload.payment_terms
+    )
+    if not rfq:
+        raise HTTPException(status_code=404, detail="RFQ not found")
+    return rfq
 
 
 # ──────────────────────────────────────────────────

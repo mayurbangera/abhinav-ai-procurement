@@ -86,6 +86,16 @@
                             <div class="text-muted small">Created On</div>
                             <div>{{ rfq.created_at.strftime("%d %B %Y, %I:%M %p") if rfq.created_at else "-" }}</div>
                         </div>
+                        {% if rfq.requirement %}
+                        <div class="col-md-4">
+                            <div class="text-muted small">Generated From</div>
+                            <div>
+                                <a href="/dashboard/requirements/{{ rfq.requirement.id }}">
+                                    {{ rfq.requirement.requirement_number }}
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -154,6 +164,50 @@ Click "Load Preview" to see the WhatsApp message that was / will be sent.</pre>
         <!-- Right Column: Vendors + Status -->
         <div class="col-lg-4">
 
+            {% if rfq.status == "Draft" %}
+            <!-- Send Details (Draft only) -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-sliders text-primary me-2"></i>RFQ &amp; Send Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Terms</label>
+                        <input type="text" class="form-control" id="paymentTerms"
+                               list="paymentTermsList"
+                               value="{{ rfq.payment_terms or '' }}"
+                               placeholder="e.g. Immediate Against Delivery">
+                        <datalist id="paymentTermsList">
+                            <option value="Immediate Against Delivery">
+                            <option value="2nd Day RTGS Against Delivery">
+                            <option value="100% Advance">
+                            <option value="30 Days Credit">
+                        </datalist>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm w-100 mb-3" id="saveDetailsBtn">
+                        <i class="bi bi-floppy me-1"></i> Save Payment Terms
+                    </button>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Quotation Deadline</label>
+                        <input type="text" class="form-control" id="deadline"
+                               placeholder="e.g. 5:00 PM, 12-Jul-2026">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Site Contact Person</label>
+                        <input type="text" class="form-control" id="contactPerson"
+                               placeholder="e.g. Mr. Pandhare">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label fw-semibold">Site Contact Number</label>
+                        <input type="text" class="form-control" id="contactNumber"
+                               placeholder="e.g. 9876543210">
+                    </div>
+                    <small class="text-muted">Deadline &amp; contact are included in the WhatsApp message when you send.</small>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Status Update -->
             <div class="card shadow-sm border-0 rounded-4 mb-4">
                 <div class="card-header bg-white">
@@ -197,6 +251,24 @@ Click "Load Preview" to see the WhatsApp message that was / will be sent.</pre>
                 </div>
             </div>
 
+            {% if rfq.status == "Draft" %}
+            <!-- Add Vendors (Draft only) -->
+            <div class="card shadow-sm border-0 rounded-4 mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-person-plus text-primary me-2"></i>Add Vendors</h5>
+                </div>
+                <div class="card-body">
+                    <input type="text" class="form-control mb-2" id="vendorSearch" placeholder="Search vendor by name...">
+                    <div id="approvedVendorList" style="max-height: 260px; overflow-y: auto;">
+                        <p class="text-muted small mb-0">Loading approved vendors...</p>
+                    </div>
+                    <button class="btn btn-primary w-100 mt-2" id="addVendorsBtn">
+                        <i class="bi bi-plus-circle me-1"></i> Add Selected Vendors
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>
@@ -204,8 +276,22 @@ Click "Load Preview" to see the WhatsApp message that was / will be sent.</pre>
 <script>
 const rfqId = {{ rfq.id }};
 
+// Build query params from the Draft send-detail fields (if present).
+function buildSendParams() {
+    const params = new URLSearchParams();
+    const d = document.getElementById('deadline');
+    const cp = document.getElementById('contactPerson');
+    const cn = document.getElementById('contactNumber');
+    if (d && d.value.trim()) params.set('deadline', d.value.trim());
+    if (cp && cp.value.trim()) params.set('contact_person', cp.value.trim());
+    if (cn && cn.value.trim()) params.set('contact_number', cn.value.trim());
+    return params;
+}
+
 document.getElementById('loadPreviewBtn').addEventListener('click', async () => {
-    const res = await fetch(`/rfqs/${rfqId}/preview`);
+    const qs = buildSendParams().toString();
+    const url = qs ? `/rfqs/${rfqId}/preview?${qs}` : `/rfqs/${rfqId}/preview`;
+    const res = await fetch(url);
     const data = await res.json();
     document.getElementById('waPreview').textContent = data.message || 'Preview not available.';
 });
@@ -226,9 +312,79 @@ document.getElementById('updateStatusBtn').addEventListener('click', async () =>
 });
 
 {% if rfq.status == "Draft" %}
+
+// ── Save payment terms (persisted) ──
+async function savePaymentTerms(silent) {
+    const pt = document.getElementById('paymentTerms').value.trim();
+    const res = await fetch(`/rfqs/${rfqId}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ payment_terms: pt })
+    });
+    if (!silent) {
+        if (res.ok) { alert('Payment terms saved.'); }
+        else { alert('Failed to save payment terms.'); }
+    }
+    return res.ok;
+}
+
+document.getElementById('saveDetailsBtn').addEventListener('click', () => savePaymentTerms(false));
+
+// ── Load approved vendors for selection ──
+const vendorListEl = document.getElementById('approvedVendorList');
+
+async function loadApprovedVendors() {
+    try {
+        const res = await fetch('/suppliers/approved');
+        const vendors = await res.json();
+        if (!Array.isArray(vendors) || vendors.length === 0) {
+            vendorListEl.innerHTML = '<p class="text-muted small mb-0">No approved vendors found.</p>';
+            return;
+        }
+        vendorListEl.innerHTML = vendors.map(v => `
+            <label class="d-flex align-items-start gap-2 p-2 border rounded-3 mb-1 vendor-row" data-name="${(v.company_name || '').toLowerCase()}">
+                <input type="checkbox" class="form-check-input mt-1 vendor-cb" value="${v.id}">
+                <div>
+                    <div class="fw-semibold small">${v.company_name || 'Unknown'}</div>
+                    <div class="text-muted small">${v.supplier_category || 'General'}</div>
+                    <div class="text-muted small">📞 ${v.whatsapp_number || '-'}</div>
+                </div>
+            </label>
+        `).join('');
+    } catch (e) {
+        vendorListEl.innerHTML = '<p class="text-danger small mb-0">Failed to load vendors.</p>';
+    }
+}
+loadApprovedVendors();
+
+document.getElementById('vendorSearch').addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    vendorListEl.querySelectorAll('.vendor-row').forEach(row => {
+        row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+    });
+});
+
+document.getElementById('addVendorsBtn').addEventListener('click', async () => {
+    const ids = Array.from(vendorListEl.querySelectorAll('.vendor-cb:checked')).map(cb => parseInt(cb.value));
+    if (ids.length === 0) { alert('Select at least one vendor to add.'); return; }
+    for (const vid of ids) {
+        await fetch(`/rfqs/${rfqId}/vendors`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ vendor_id: vid })
+        });
+    }
+    alert(`${ids.length} vendor(s) added.`);
+    window.location.reload();
+});
+
+// ── Send RFQ (saves payment terms first, includes deadline/contact) ──
 document.getElementById('sendRfqBtn').addEventListener('click', async () => {
     if (!confirm('Send this RFQ to all attached vendors via WhatsApp?')) return;
-    const res = await fetch(`/rfqs/${rfqId}/send`, { method: 'POST' });
+    await savePaymentTerms(true);
+    const qs = buildSendParams().toString();
+    const url = qs ? `/rfqs/${rfqId}/send?${qs}` : `/rfqs/${rfqId}/send`;
+    const res = await fetch(url, { method: 'POST' });
     const data = await res.json();
     if (data.sent_to) {
         alert(`✅ RFQ sent to ${data.sent_to.length} vendor(s) successfully.`);

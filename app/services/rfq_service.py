@@ -67,6 +67,122 @@ class RFQService:
             db.refresh(rfq)
         return rfq
 
+    @staticmethod
+    def update_rfq_details(
+        db: Session,
+        rfq_id: int,
+        payment_terms: str = None
+    ) -> RFQ:
+        """Update RFQ-specific editable fields (currently payment terms).
+
+        payment_terms uses the existing column; no schema change involved.
+        Passing None leaves the value unchanged; passing "" clears it.
+        """
+        rfq = db.query(RFQ).filter(RFQ.id == rfq_id).first()
+        if not rfq:
+            return None
+        if payment_terms is not None:
+            rfq.payment_terms = payment_terms.strip() or None
+        db.commit()
+        db.refresh(rfq)
+        return rfq
+
+    # ──────────────────────────────────────────────────
+    # Generate RFQ from an existing Requirement (snapshot)
+    # ──────────────────────────────────────────────────
+
+    @staticmethod
+    def generate_rfq_from_requirement(db: Session, requirement_id: int) -> RFQ:
+        """Create a Draft RFQ by snapshotting a Requirement + its materials.
+
+        Enterprise snapshot model: values are COPIED once at generation time so
+        that later edits to the Requirement never mutate an already-created RFQ.
+        The whole operation is a single transaction — on any error nothing is
+        persisted (no orphan RFQ).
+
+        Returns None if the requirement does not exist.
+        Raises ValueError if the requirement has no materials.
+        """
+        from app.models.requirement import Requirement
+        from app.models.requirement_material import RequirementMaterial
+
+        requirement = (
+            db.query(Requirement)
+            .filter(Requirement.id == requirement_id)
+            .first()
+        )
+        if not requirement:
+            return None
+
+        materials = (
+            db.query(RequirementMaterial)
+            .filter(RequirementMaterial.requirement_id == requirement_id)
+            .all()
+        )
+        if not materials:
+            raise ValueError(
+                "This requirement has no materials to generate an RFQ."
+            )
+
+        # Header delivery location: use the single common location if every
+        # material shares one; otherwise leave blank for the Purchase Manager.
+        locations = {
+            m.delivery_location.strip()
+            for m in materials
+            if m.delivery_location and m.delivery_location.strip()
+        }
+        delivery_location = locations.pop() if len(locations) == 1 else ""
+
+        try:
+            rfq = RFQ(
+                rfq_number=RFQService._generate_rfq_number(db),
+                project_name=requirement.project_name,
+                site_name=requirement.site_name,
+                delivery_location=delivery_location,
+                payment_terms=None,
+                created_by=requirement.requested_by,
+                status="Draft",
+                requirement_id=requirement.id
+            )
+            db.add(rfq)
+            db.flush()  # obtain rfq.id within the same transaction
+
+            for m in materials:
+                # Structured requirement fields that have no dedicated RFQ item
+                # column are preserved inside the flexible dynamic_fields JSONB.
+                dynamic = {}
+                if m.specification:
+                    dynamic["specification"] = m.specification
+                if m.additional_requirements:
+                    dynamic["additional_requirements"] = (
+                        m.additional_requirements
+                    )
+                dynamic["alternate_brand_allowed"] = (
+                    "Yes" if m.alternate_brand_allowed else "No"
+                )
+
+                item = RFQItem(
+                    rfq_id=rfq.id,
+                    # material_category is NOT NULL on rfq_items, but
+                    # requirement category is optional — fall back to "General".
+                    material_category=(m.category or "General"),
+                    material_name=m.material_name,
+                    quantity=m.quantity,
+                    unit=m.unit,
+                    brand_required=m.preferred_brand,
+                    dynamic_fields=dynamic,
+                    remarks=m.remarks
+                )
+                db.add(item)
+
+            db.commit()
+            db.refresh(rfq)
+            return rfq
+
+        except Exception:
+            db.rollback()
+            raise
+
     # ──────────────────────────────────────────────────
     # RFQ Items
     # ──────────────────────────────────────────────────

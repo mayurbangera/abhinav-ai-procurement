@@ -69,6 +69,12 @@ class RFQStatusUpdate(BaseModel):
     status: str
 
 
+class RFQUpdate(BaseModel):
+    # RFQ-specific editable fields. Only payment_terms is persisted (existing
+    # column); deadline / contact remain transient and are passed at send time.
+    payment_terms: Optional[str] = None
+
+
 class RFQResponse(BaseModel):
     id: int
     rfq_number: str
@@ -78,6 +84,7 @@ class RFQResponse(BaseModel):
     payment_terms: Optional[str]
     status: str
     created_by: str
+    requirement_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

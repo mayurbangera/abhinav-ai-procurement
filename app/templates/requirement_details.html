@@ -44,6 +44,7 @@ Requirement Details
             </button>
 
             <button
+                id="generateRfqBtn"
                 class="btn btn-success"
                 {% if not can_generate_rfq %}
                 disabled
@@ -1110,6 +1111,66 @@ confirmDeleteButton.addEventListener("click", async () => {
     }
 
 });
+
+
+// ============================
+// Generate RFQ from this Requirement
+// ============================
+
+const generateRfqBtn =
+    document.getElementById("generateRfqBtn");
+
+if (generateRfqBtn && !generateRfqBtn.disabled) {
+
+    generateRfqBtn.addEventListener("click", async function () {
+
+        if (!confirm(
+            "Generate an RFQ from this requirement? " +
+            "The materials will be copied into a new Draft RFQ."
+        )) {
+            return;
+        }
+
+        generateRfqBtn.disabled = true;
+
+        try {
+
+            const response = await fetch(
+                "/rfqs/generate-from-requirement/{{ requirement.id }}",
+                { method: "POST" }
+            );
+
+            if (!response.ok) {
+
+                const error = await response.json();
+
+                alert(error.detail || "Unable to generate RFQ.");
+
+                generateRfqBtn.disabled = false;
+
+                return;
+
+            }
+
+            const rfq = await response.json();
+
+            window.location.href = "/dashboard/rfq/" + rfq.id;
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            alert("Something went wrong while generating the RFQ.");
+
+            generateRfqBtn.disabled = false;
+
+        }
+
+    });
+
+}
 
 });
 
