@@ -1,0 +1,282 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Log Quotation — {{ rfq.rfq_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Log Quotation</h2>
+            <p class="text-muted mb-0">Recording manual quotation for {{ vendor.company_name }} against {{ rfq.rfq_number }}</p>
+        </div>
+        <a href="/dashboard/rfq/{{ rfq.id }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to RFQ
+        </a>
+    </div>
+
+    {% if existing_quotation %}
+    <div class="alert alert-warning shadow-sm border-0 rounded-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Revision Notice:</strong> An existing quotation ({{ existing_quotation.quotation_number }}, Rev {{ existing_quotation.revision_number }}) exists for this vendor. Submitting this form will generate a new revision and supersede the older one.
+    </div>
+    {% endif %}
+
+    <form id="quotationForm">
+
+        <!-- ── Section 1: Header / Commercial Info ── -->
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="fw-bold mb-0"><i class="bi bi-receipt text-primary me-2"></i>Commercial Terms</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Date Received <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="date_received" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Validity Date</label>
+                        <input type="date" class="form-control" id="validity_date">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Payment Terms</label>
+                        <input type="text" class="form-control" id="payment_terms" placeholder="e.g. 100% Advance">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Delivery Timeline</label>
+                        <input type="text" class="form-control" id="delivery_timeline" placeholder="e.g. 7 Days from PO">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Total Freight (Lump Sum)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control calc-trigger header-cost" id="freight_amount_total" min="0" step="0.01" value="0.0">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Total Loading/Unloading</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control calc-trigger header-cost" id="loading_unloading_total" min="0" step="0.01" value="0.0">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Logged By <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="created_by" placeholder="Your Name" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Attachment (PDF/Image)</label>
+                        <input type="file" class="form-control" id="attachment" accept=".pdf, .jpg, .jpeg, .png">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Section 2: Items Breakdown ── -->
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="fw-bold mb-0"><i class="bi bi-list-columns-reverse text-primary me-2"></i>Item Rates</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="itemsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 250px;">Requested Material</th>
+                                <th style="width: 100px;">Quoting?</th>
+                                <th style="width: 120px;">Qty Offered</th>
+                                <th style="width: 150px;">Brand Offered</th>
+                                <th style="width: 150px;">Basic Rate (₹)</th>
+                                <th style="width: 100px;">Disc (%)</th>
+                                <th style="width: 100px;">Tax (%)</th>
+                                <th style="width: 120px;">Item Freight (₹)</th>
+                                <th style="width: 150px;">Final Amount (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in rfq_items %}
+                            <tr class="item-row" data-rfq-item-id="{{ item.id }}">
+                                <td>
+                                    <div class="fw-bold small">{{ item.material_name }}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">Requested: {{ item.quantity }} {{ item.unit }}</div>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm is-quoted">
+                                        <option value="true">Yes</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm calc-trigger qty-offered" value="{{ item.quantity }}" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm brand-offered" placeholder="{{ item.brand_required or 'Any' }}">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm calc-trigger basic-rate" value="0.0" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm calc-trigger disc-pct" value="0.0" step="0.01" min="0" max="100">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm calc-trigger tax-pct" value="18.0" step="0.01" min="0" max="100">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm calc-trigger item-freight" value="0.0" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm final-amount fw-bold bg-light" value="0.00" readonly>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td colspan="8" class="text-end text-muted">Grand Total (incl. Header Costs) = </td>
+                                <td class="text-primary fs-5" id="displayGrandTotal">₹ 0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mb-5">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+            <button type="button" class="btn btn-primary" id="saveQuotationBtn">
+                <i class="bi bi-floppy me-1"></i> Save Quotation
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Set today's date automatically
+    document.getElementById('date_received').valueAsDate = new Date();
+
+    // ── Math Calculations ──
+    function recalculate() {
+        let grandTotal = 0.0;
+        
+        // Add header costs
+        const hFreight = parseFloat(document.getElementById('freight_amount_total').value) || 0;
+        const hLoading = parseFloat(document.getElementById('loading_unloading_total').value) || 0;
+        grandTotal += hFreight + hLoading;
+
+        // Loop rows
+        document.querySelectorAll('.item-row').forEach(row => {
+            const isQuoted = row.querySelector('.is-quoted').value === 'true';
+            const inputs = row.querySelectorAll('input:not(.is-quoted)');
+            
+            if (!isQuoted) {
+                // Disable inputs and zero out
+                inputs.forEach(inp => { if(!inp.classList.contains('final-amount')) inp.disabled = true; });
+                row.querySelector('.final-amount').value = "0.00";
+                return;
+            }
+            
+            // Enable inputs
+            inputs.forEach(inp => { if(!inp.classList.contains('final-amount')) inp.disabled = false; });
+
+            const qty = parseFloat(row.querySelector('.qty-offered').value) || 0;
+            const rate = parseFloat(row.querySelector('.basic-rate').value) || 0;
+            const discPct = parseFloat(row.querySelector('.disc-pct').value) || 0;
+            const taxPct = parseFloat(row.querySelector('.tax-pct').value) || 0;
+            const freight = parseFloat(row.querySelector('.item-freight').value) || 0;
+
+            const discAmt = rate * (discPct / 100);
+            const taxable = rate - discAmt;
+            const taxAmt = taxable * (taxPct / 100);
+            const landedRate = taxable + taxAmt + freight;
+            
+            const totalItemAmount = landedRate * qty;
+            row.querySelector('.final-amount').value = totalItemAmount.toFixed(2);
+            
+            grandTotal += totalItemAmount;
+        });
+
+        document.getElementById('displayGrandTotal').textContent = `₹ ${grandTotal.toFixed(2)}`;
+    }
+
+    // Bind triggers
+    document.querySelectorAll('.calc-trigger').forEach(inp => {
+        inp.addEventListener('input', recalculate);
+    });
+    document.querySelectorAll('.is-quoted').forEach(sel => {
+        sel.addEventListener('change', recalculate);
+    });
+
+    // ── Save Logic ──
+    document.getElementById('saveQuotationBtn').addEventListener('click', async () => {
+        const created_by = document.getElementById('created_by').value.trim();
+        const date_received = document.getElementById('date_received').value;
+        if (!created_by || !date_received) {
+            alert('Date Received and Logged By are required.');
+            return;
+        }
+
+        // Handle file upload first if present
+        let attachmentPath = null;
+        const fileInput = document.getElementById('attachment');
+        if (fileInput.files.length > 0) {
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            try {
+                const upRes = await fetch('/upload', { method: 'POST', body: fd });
+                if (upRes.ok) {
+                    const upData = await upRes.json();
+                    attachmentPath = upData.file_path;
+                }
+            } catch(e) {
+                console.error("Upload failed", e);
+            }
+        }
+
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+            items.push({
+                rfq_item_id: parseInt(row.dataset.rfqItemId),
+                is_quoted: row.querySelector('.is-quoted').value === 'true',
+                quoted_quantity: parseFloat(row.querySelector('.qty-offered').value) || 0,
+                brand_offered: row.querySelector('.brand-offered').value.trim() || null,
+                basic_rate: parseFloat(row.querySelector('.basic-rate').value) || 0,
+                discount_percent: parseFloat(row.querySelector('.disc-pct').value) || 0,
+                tax_percent: parseFloat(row.querySelector('.tax-pct').value) || 0,
+                freight_amount: parseFloat(row.querySelector('.item-freight').value) || 0
+            });
+        });
+
+        const payload = {
+            rfq_id: {{ rfq.id }},
+            vendor_id: {{ vendor.id }},
+            date_received: date_received,
+            validity_date: document.getElementById('validity_date').value || null,
+            payment_terms: document.getElementById('payment_terms').value.trim() || null,
+            delivery_timeline: document.getElementById('delivery_timeline').value.trim() || null,
+            freight_amount_total: parseFloat(document.getElementById('freight_amount_total').value) || 0,
+            loading_unloading_total: parseFloat(document.getElementById('loading_unloading_total').value) || 0,
+            attachment_path: attachmentPath,
+            creation_source: "MANUAL",
+            created_by: created_by,
+            items: items
+        };
+
+        const res = await fetch('/quotations/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            alert('Quotation saved successfully!');
+            window.location.href = `/dashboard/rfq/{{ rfq.id }}`;
+        } else {
+            const err = await res.json();
+            alert(`Error saving quotation: ${err.detail || 'Unknown error'}`);
+        }
+    });
+
+</script>
+{% endblock %}

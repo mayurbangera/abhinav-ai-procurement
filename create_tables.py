@@ -14,6 +14,10 @@ from app.models.rfq import RFQ
 from app.models.rfq_item import RFQItem
 from app.models.rfq_vendor import RFQVendor
 
+from app.models.quotation import Quotation
+from app.models.quotation_item import QuotationItem
+from app.models.document_ingestion_log import DocumentIngestionLog
+
 print("Creating tables...")
 
 Base.metadata.create_all(bind=engine)

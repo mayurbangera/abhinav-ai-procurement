@@ -27,6 +27,9 @@ from app.api.material_master_dashboard import (
 from app.api.vendor_dashboard import router as vendor_dashboard_router
 from app.api.rfq import router as rfq_router
 from app.api.rfq_dashboard import router as rfq_dashboard_router
+from app.api.quotation import router as quotation_router
+from app.api.quotation_dashboard import router as quotation_dashboard_router
+from app.api.document_intelligence import router as document_intelligence_router
 
 app = FastAPI(
     title="Abhinav Group Supplier Registration System"
@@ -60,6 +63,9 @@ app.include_router(material_master_dashboard_router)
 app.include_router(vendor_dashboard_router)
 app.include_router(rfq_router)
 app.include_router(rfq_dashboard_router)
+app.include_router(quotation_router)
+app.include_router(quotation_dashboard_router)
+app.include_router(document_intelligence_router)
 
 
 @app.get("/")

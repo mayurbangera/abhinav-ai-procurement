@@ -8,6 +8,7 @@ from app.models.rfq import RFQ
 from app.models.rfq_item import RFQItem
 from app.models.rfq_vendor import RFQVendor
 from app.models.supplier import Supplier
+from app.models.quotation import Quotation
 from app.services.rfq_service import RFQService
 
 router = APIRouter(
@@ -74,9 +75,16 @@ def rfq_details(
     enriched_vendors = []
     for rv in rfq_vendors:
         vendor = db.query(Supplier).filter(Supplier.id == rv.vendor_id).first()
+        quotation = db.query(Quotation).filter(
+            Quotation.rfq_id == rfq_id,
+            Quotation.vendor_id == rv.vendor_id,
+            Quotation.is_latest == True
+        ).first()
+        
         enriched_vendors.append({
             "rv": rv,
-            "vendor": vendor
+            "vendor": vendor,
+            "quotation": quotation
         })
 
     return templates.TemplateResponse(

@@ -235,13 +235,26 @@ Click "Load Preview" to see the WhatsApp message that was / will be sent.</pre>
                             <div class="fw-semibold small">{{ ev.vendor.company_name if ev.vendor else "Unknown Vendor" }}</div>
                             <div class="text-muted small">📞 {{ ev.vendor.whatsapp_number if ev.vendor else "-" }}</div>
                         </div>
-                        <div>
                             {% if ev.rv.whatsapp_status == "Sent" %}
                                 <span class="badge bg-success">Sent</span>
                             {% elif ev.rv.whatsapp_status == "Failed" %}
                                 <span class="badge bg-danger">Failed</span>
                             {% else %}
                                 <span class="badge bg-secondary">Pending</span>
+                            {% endif %}
+                        </div>
+                        <div class="ms-auto">
+                            {% if ev.quotation %}
+                                <a href="/dashboard/quotation/{{ ev.quotation.id }}" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-eye"></i> View Quote (Rev {{ ev.quotation.revision_number }})
+                                </a>
+                                <a href="/dashboard/quotation/create?rfq_id={{ rfq.id }}&vendor_id={{ ev.vendor.id }}" class="btn btn-sm btn-outline-primary ms-1">
+                                    <i class="bi bi-pencil"></i> Revise
+                                </a>
+                            {% else %}
+                                <a href="/dashboard/quotation/create?rfq_id={{ rfq.id }}&vendor_id={{ ev.vendor.id }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-receipt"></i> Log Quotation
+                                </a>
                             {% endif %}
                         </div>
                     </div>

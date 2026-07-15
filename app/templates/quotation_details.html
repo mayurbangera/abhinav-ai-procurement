@@ -1,0 +1,120 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Quotation Details — {{ quotation.quotation_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                {{ quotation.quotation_number }}
+                {% if not quotation.is_latest %}
+                    <span class="badge bg-danger ms-2">Superseded</span>
+                {% else %}
+                    <span class="badge bg-success ms-2">Active</span>
+                {% endif %}
+                <span class="badge bg-secondary ms-2">Rev {{ quotation.revision_number }}</span>
+            </h2>
+            <p class="text-muted mb-0">Quotation from <strong>{{ vendor.company_name }}</strong> for RFQ <strong>{{ rfq.rfq_number }}</strong></p>
+        </div>
+        <a href="/dashboard/rfq/{{ rfq.id }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to RFQ
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Commercial Info -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-4 h-100">
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0">Commercial Terms</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr><td class="text-muted">Date Received:</td><td class="fw-semibold">{{ quotation.date_received }}</td></tr>
+                        <tr><td class="text-muted">Validity Date:</td><td class="fw-semibold">{{ quotation.validity_date or 'N/A' }}</td></tr>
+                        <tr><td class="text-muted">Payment Terms:</td><td class="fw-semibold">{{ quotation.payment_terms or 'N/A' }}</td></tr>
+                        <tr><td class="text-muted">Delivery Timeline:</td><td class="fw-semibold">{{ quotation.delivery_timeline or 'N/A' }}</td></tr>
+                        <tr><td class="text-muted">Header Freight:</td><td class="fw-semibold">₹ {{ quotation.freight_amount_total }}</td></tr>
+                        <tr><td class="text-muted">Loading/Unloading:</td><td class="fw-semibold">₹ {{ quotation.loading_unloading_total }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grand Total & Attachment -->
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-4 h-100 bg-light">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+                    <p class="text-muted mb-1 text-uppercase fw-semibold">Grand Total</p>
+                    <h1 class="display-5 fw-bold text-primary mb-4">₹ {{ "{:,.2f}".format(quotation.grand_total) }}</h1>
+                    
+                    <div class="d-flex gap-3">
+                        {% if quotation.attachment_path %}
+                        <a href="/{{ quotation.attachment_path }}" target="_blank" class="btn btn-outline-primary">
+                            <i class="bi bi-file-earmark-pdf me-2"></i> View Vendor Attachment
+                        </a>
+                        {% endif %}
+                        <span class="badge bg-secondary p-2 d-flex align-items-center">
+                            <i class="bi bi-person me-2"></i> Logged by: {{ quotation.created_by }} ({{ quotation.creation_source }})
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items List -->
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-white">
+            <h5 class="fw-bold mb-0">Quoted Items</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Material</th>
+                            <th>Brand Offered</th>
+                            <th>Qty</th>
+                            <th>Basic Rate</th>
+                            <th>Disc %</th>
+                            <th>Tax %</th>
+                            <th>Item Freight</th>
+                            <th>Landed Rate</th>
+                            <th>Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in enriched_items %}
+                        {% if item.quote_item.is_quoted %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold small">{{ item.rfq_item.material_name }}</div>
+                            </td>
+                            <td>{{ item.quote_item.brand_offered or '-' }}</td>
+                            <td>{{ item.quote_item.quoted_quantity }} {{ item.rfq_item.unit }}</td>
+                            <td>₹ {{ "{:,.2f}".format(item.quote_item.basic_rate) }}</td>
+                            <td>{{ item.quote_item.discount_percent }}%</td>
+                            <td>{{ item.quote_item.tax_percent }}%</td>
+                            <td>₹ {{ "{:,.2f}".format(item.quote_item.freight_amount) }}</td>
+                            <td class="fw-bold">₹ {{ "{:,.2f}".format(item.quote_item.final_landed_rate) }}</td>
+                            <td class="text-primary fw-bold">₹ {{ "{:,.2f}".format(item.quote_item.total_item_amount) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr class="table-danger">
+                            <td>
+                                <div class="fw-bold small text-decoration-line-through">{{ item.rfq_item.material_name }}</div>
+                            </td>
+                            <td colspan="8" class="text-danger fw-semibold fst-italic">Vendor did not quote for this item.</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
