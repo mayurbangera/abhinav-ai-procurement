@@ -748,12 +748,39 @@ async def verify_webhook(request: Request):
     )
 
 
+import hmac
+import hashlib
+from app.config.settings import META_APP_SECRET
+
+def verify_webhook_signature(body: bytes, signature_header: str) -> bool:
+    if not META_APP_SECRET:
+        return True
+    if not signature_header or not signature_header.startswith("sha256="):
+        return False
+    
+    expected_sig = signature_header.split("sha256=")[1].strip()
+    computed_sig = hmac.new(
+        key=META_APP_SECRET.encode("utf-8"),
+        msg=body,
+        digestmod=hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(computed_sig, expected_sig)
+
+
 @router.post("/webhook")
 async def handle_inbound_webhook(request: Request, background_tasks: BackgroundTasks):
 
     try:
+        raw_body = await request.body()
+        signature_header = request.headers.get("X-Hub-Signature-256")
 
-        body = await request.json()
+        if META_APP_SECRET:
+            if not verify_webhook_signature(raw_body, signature_header):
+                raise HTTPException(status_code=403, detail="Signature verification failed.")
+
+        import json
+        body = json.loads(raw_body)
 
         print("--- INCOMING WHATSAPP PAYLOAD ---")
 
@@ -990,6 +1017,8 @@ async def handle_inbound_webhook(request: Request, background_tasks: BackgroundT
 
         
 
+    except HTTPException as he:
+        raise he
     except Exception as e:
 
         print(

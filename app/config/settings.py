@@ -17,6 +17,10 @@ META_PHONE_NUMBER_ID = os.getenv(
     "META_PHONE_NUMBER_ID"
 )
 
+META_APP_SECRET = os.getenv(
+    "META_APP_SECRET"
+)
+
 
 print("PHONE NUMBER ID:", META_PHONE_NUMBER_ID)
 
