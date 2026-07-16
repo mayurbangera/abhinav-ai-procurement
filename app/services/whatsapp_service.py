@@ -42,7 +42,10 @@ def send_text_message(
     print("PHONE NUMBER ID:", META_PHONE_NUMBER_ID)
     print("TOKEN PREFIX:", META_ACCESS_TOKEN[:20])
     print("TO:", phone_number)
-    print("PAYLOAD:", payload)
+    try:
+        print("PAYLOAD:", payload)
+    except UnicodeEncodeError:
+        print("PAYLOAD:", str(payload).encode("ascii", "ignore").decode("ascii"))
     print("=========================================\n")
 
     response = requests.post(
@@ -52,6 +55,9 @@ def send_text_message(
     )
 
     print("STATUS:", response.status_code)
-    print("RESPONSE:", response.text)
+    try:
+        print("RESPONSE:", response.text)
+    except UnicodeEncodeError:
+        print("RESPONSE:", response.text.encode("ascii", "ignore").decode("ascii"))
 
     return response.json()

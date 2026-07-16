@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.database.dependencies import get_db
@@ -749,7 +749,7 @@ async def verify_webhook(request: Request):
 
 
 @router.post("/webhook")
-async def handle_inbound_webhook(request: Request):
+async def handle_inbound_webhook(request: Request, background_tasks: BackgroundTasks):
 
     try:
 
@@ -818,11 +818,42 @@ async def handle_inbound_webhook(request: Request):
                 ).first()
 
                 if not conversation:
+                    # Check if sender is an approved supplier
+                    clean_phone = sender_phone.replace("+", "").strip()
+                    clean_phone_10 = clean_phone[-10:] if (clean_phone.startswith("91") and len(clean_phone) > 10) else clean_phone
+                    supplier = db.query(Supplier).filter(
+                        (Supplier.whatsapp_number.like(f"%{clean_phone_10}")) |
+                        (Supplier.whatsapp_number == sender_phone)
+                    ).filter(
+                        Supplier.registration_status == "APPROVED"
+                    ).first()
 
-                    send_text_message(
-                        sender_phone,
-                        "No active registration found."
-                    )
+                    if supplier:
+                        # Ingest quotation document in background
+                        file_path = download_media(
+                            document["id"],
+                            "uploads/quotation_documents"
+                        )
+                        original_filename = document.get("filename", "quotation.pdf")
+                        
+                        from app.services.whatsapp_pipeline_service import process_whatsapp_document_pipeline
+                        background_tasks.add_task(
+                            process_whatsapp_document_pipeline,
+                            db,
+                            sender_phone,
+                            file_path,
+                            original_filename
+                        )
+                        
+                        send_text_message(
+                            sender_phone,
+                            "We have received your document and our AI is processing it. You will receive a confirmation shortly."
+                        )
+                    else:
+                        send_text_message(
+                            sender_phone,
+                            "No active registration found."
+                        )
 
                     return {
                         "status": "success"
@@ -882,11 +913,43 @@ async def handle_inbound_webhook(request: Request):
                 ).first()
 
                 if not conversation:
+                    # Check if sender is an approved supplier
+                    clean_phone = sender_phone.replace("+", "").strip()
+                    clean_phone_10 = clean_phone[-10:] if (clean_phone.startswith("91") and len(clean_phone) > 10) else clean_phone
+                    supplier = db.query(Supplier).filter(
+                        (Supplier.whatsapp_number.like(f"%{clean_phone_10}")) |
+                        (Supplier.whatsapp_number == sender_phone)
+                    ).filter(
+                        Supplier.registration_status == "APPROVED"
+                    ).first()
 
-                    send_text_message(
-                        sender_phone,
-                        "No active registration found."
-                    )
+                    if supplier:
+                        # Ingest quotation image in background
+                        file_path = download_media(
+                            image["id"],
+                            "uploads/quotation_documents"
+                        )
+                        import os
+                        original_filename = os.path.basename(file_path)
+                        
+                        from app.services.whatsapp_pipeline_service import process_whatsapp_document_pipeline
+                        background_tasks.add_task(
+                            process_whatsapp_document_pipeline,
+                            db,
+                            sender_phone,
+                            file_path,
+                            original_filename
+                        )
+                        
+                        send_text_message(
+                            sender_phone,
+                            "We have received your document and our AI is processing it. You will receive a confirmation shortly."
+                        )
+                    else:
+                        send_text_message(
+                            sender_phone,
+                            "No active registration found."
+                        )
 
                     return {
                         "status": "success"
