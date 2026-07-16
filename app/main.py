@@ -30,6 +30,7 @@ from app.api.rfq_dashboard import router as rfq_dashboard_router
 from app.api.quotation import router as quotation_router
 from app.api.quotation_dashboard import router as quotation_dashboard_router
 from app.api.document_intelligence import router as document_intelligence_router
+from app.api.document_intelligence_dashboard import router as document_intelligence_dashboard_router
 
 app = FastAPI(
     title="Abhinav Group Supplier Registration System"
@@ -66,6 +67,7 @@ app.include_router(rfq_dashboard_router)
 app.include_router(quotation_router)
 app.include_router(quotation_dashboard_router)
 app.include_router(document_intelligence_router)
+app.include_router(document_intelligence_dashboard_router)
 
 
 @app.get("/")

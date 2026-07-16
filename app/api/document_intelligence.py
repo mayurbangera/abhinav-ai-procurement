@@ -23,8 +23,13 @@ from app.services.document_intelligence_service import (
     ingest_document,
     list_ingested_documents,
     get_ingested_document,
-    extract_text_from_pdf
+    extract_text_from_pdf,
+    classify_document,
+    parse_with_llm
 )
+from app.services.entity_resolution_service import resolve_entities
+from app.services.business_validation_service import validate_document_business
+from app.services.quotation_draft_service import create_draft_quotation
 
 router = APIRouter(
     prefix="/document-intelligence",
@@ -174,4 +179,242 @@ def extract_text(
     """
     result = extract_text_from_pdf(db=db, document_uuid=document_uuid)
     return result
+
+
+# ──────────────────────────────────────────────────────────────
+# POST /document-intelligence/{document_uuid}/classify
+# ──────────────────────────────────────────────────────────────
+
+@router.post("/{document_uuid}/classify")
+def classify(
+    document_uuid: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger rules-based keyword classification for a specific document.
+
+    - Scans the extracted text file.
+    - Resolves document type (QUOTATION, PURCHASE_ORDER, INVOICE, etc.).
+    - Updates log 'document_type' column.
+    """
+    doc_type = classify_document(db=db, document_uuid=document_uuid)
+    return {
+        "document_uuid": document_uuid,
+        "document_type": doc_type
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# POST /document-intelligence/{document_uuid}/parse
+# ──────────────────────────────────────────────────────────────
+
+@router.post("/{document_uuid}/parse")
+def parse(
+    document_uuid: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger structured AI extraction (LLM) for a specific document.
+
+    - Resolves raw text extraction.
+    - Routes to the configured AI extraction provider (Gemini, Groq, Ollama).
+    - Serializes output to JSON schema and saves to disk.
+    - Transitions DB status to 'DONE'.
+    """
+    result = parse_with_llm(db=db, document_uuid=document_uuid)
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
+# POST /document-intelligence/{document_uuid}/resolve-entities
+# ──────────────────────────────────────────────────────────────
+
+@router.post("/{document_uuid}/resolve-entities")
+def resolve_document_entities(
+    document_uuid: str,
+    threshold: float = Query(80.0, ge=0.0, le=100.0, description="Similarity matching threshold percent"),
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger entity resolution for a specific document.
+
+    - Resolves vendor matching using exact GST match or fuzzy name matching.
+    - Resolves line item material matching using fuzzy name matching.
+    - Overwrites the extraction JSON output on disk with resolved codes.
+    """
+    result = resolve_entities(db=db, document_uuid=document_uuid, threshold=threshold)
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
+# POST /document-intelligence/{document_uuid}/validate
+# ──────────────────────────────────────────────────────────────
+
+@router.post("/{document_uuid}/validate")
+def validate_document(
+    document_uuid: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger mathematical and business rules validation for a specific document.
+
+    - Verifies line item amounts (quantity * rate = total).
+    - Verifies grand total sum matching.
+    - Flags validity date age/expiry warnings.
+    - Flags missing payment or delivery terms.
+    - Overwrites the extraction JSON output on disk with validation results.
+    """
+    result = validate_document_business(db=db, document_uuid=document_uuid)
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
+# POST /document-intelligence/{document_uuid}/create-draft-quotation
+# ──────────────────────────────────────────────────────────────
+
+@router.post("/{document_uuid}/create-draft-quotation")
+def create_quotation_draft(
+    document_uuid: str,
+    rfq_id: int = Query(..., description="The RFQ ID to associate this quotation with"),
+    created_by: str = Query("AI_SYSTEM", description="Username stamped on the quotation record"),
+    fuzzy_threshold: float = Query(80.0, ge=0.0, le=100.0, description="Similarity threshold for matching line items to RFQ items"),
+    db: Session = Depends(get_db)
+):
+    """
+    Auto-draft a Quotation and QuotationItems from a validated AI extraction.
+
+    - Resolves the vendor against the suppliers database table.
+    - Fuzzy-matches extracted line items to RFQ items.
+    - Creates Quotation and QuotationItem records in the database.
+    - Returns the created quotation ID and line item count.
+    """
+    result = create_draft_quotation(
+        db=db,
+        document_uuid=document_uuid,
+        rfq_id=rfq_id,
+        created_by=created_by,
+        fuzzy_threshold=fuzzy_threshold,
+    )
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
+# PATCH /document-intelligence/{document_uuid}/approve
+# ──────────────────────────────────────────────────────────────
+
+@router.patch("/{document_uuid}/approve")
+def approve_document(
+    document_uuid: str,
+    approved_by: str = Query("HUMAN_REVIEWER", description="Name/ID of reviewer approving"),
+    db: Session = Depends(get_db)
+):
+    """
+    Approve the AI-drafted quotation for a specific document.
+
+    - Finds the Draft quotation linked to this document UUID.
+    - Updates Quotation status from 'Draft' to 'Approved'.
+    - Returns updated quotation details.
+    """
+    from app.models.document_ingestion_log import DocumentIngestionLog
+    from app.models.quotation import Quotation
+    import os, json
+    from app.services.document_intelligence_service import INGEST_FOLDER
+
+    log = db.query(DocumentIngestionLog).filter(
+        DocumentIngestionLog.document_uuid == document_uuid
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    # Find the draft quotation by looking up the extraction JSON for the quotation number
+    json_path = os.path.join(INGEST_FOLDER, f"{document_uuid}_extracted.json").replace("\\", "/")
+    if not os.path.exists(json_path):
+        raise HTTPException(status_code=400, detail="No extraction JSON found. Run /parse first.")
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    doc_number = payload.get("document_metadata", {}).get("document_number", {}).get("value")
+    quotation_number = doc_number if doc_number else f"AI-DRAFT-{document_uuid[:8].upper()}"
+
+    quotation = db.query(Quotation).filter(Quotation.quotation_number == quotation_number).first()
+    if not quotation:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No draft quotation found with number '{quotation_number}'. Run /create-draft-quotation first."
+        )
+
+    if quotation.status == "Approved":
+        return {"message": "Quotation is already approved.", "quotation_id": quotation.id, "status": quotation.status}
+
+    quotation.status = "Approved"
+    db.commit()
+    db.refresh(quotation)
+
+    return {
+        "message": f"Quotation '{quotation_number}' approved by '{approved_by}'.",
+        "quotation_id": quotation.id,
+        "quotation_number": quotation.quotation_number,
+        "status": quotation.status,
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# PATCH /document-intelligence/{document_uuid}/reject
+# ──────────────────────────────────────────────────────────────
+
+@router.patch("/{document_uuid}/reject")
+def reject_document(
+    document_uuid: str,
+    rejected_by: str = Query("HUMAN_REVIEWER", description="Name/ID of reviewer rejecting"),
+    reason: str = Query("", description="Reason for rejection"),
+    db: Session = Depends(get_db)
+):
+    """
+    Reject the AI-drafted quotation for a specific document.
+
+    - Finds the Draft quotation linked to this document UUID.
+    - Updates Quotation status from 'Draft' to 'Rejected'.
+    - Updates the ingestion log processing_error with the rejection reason.
+    """
+    from app.models.document_ingestion_log import DocumentIngestionLog
+    from app.models.quotation import Quotation
+    import os, json
+    from app.services.document_intelligence_service import INGEST_FOLDER
+
+    log = db.query(DocumentIngestionLog).filter(
+        DocumentIngestionLog.document_uuid == document_uuid
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    json_path = os.path.join(INGEST_FOLDER, f"{document_uuid}_extracted.json").replace("\\", "/")
+    if not os.path.exists(json_path):
+        raise HTTPException(status_code=400, detail="No extraction JSON found. Run /parse first.")
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    doc_number = payload.get("document_metadata", {}).get("document_number", {}).get("value")
+    quotation_number = doc_number if doc_number else f"AI-DRAFT-{document_uuid[:8].upper()}"
+
+    quotation = db.query(Quotation).filter(Quotation.quotation_number == quotation_number).first()
+    if not quotation:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No draft quotation found with number '{quotation_number}'. Run /create-draft-quotation first."
+        )
+
+    quotation.status = "Rejected"
+    log.processing_error = f"Rejected by '{rejected_by}': {reason}" if reason else f"Rejected by '{rejected_by}'"
+    db.commit()
+    db.refresh(quotation)
+
+    return {
+        "message": f"Quotation '{quotation_number}' rejected by '{rejected_by}'.",
+        "quotation_id": quotation.id,
+        "quotation_number": quotation.quotation_number,
+        "status": quotation.status,
+        "reason": reason,
+    }
 

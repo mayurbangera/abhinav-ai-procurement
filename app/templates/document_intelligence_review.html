@@ -1,0 +1,534 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Review Document — {{ log.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" id="review-page" data-uuid="{{ document_uuid }}">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="/dashboard/document-intelligence/" class="btn btn-sm btn-outline-secondary mb-2">
+                <i class="bi bi-arrow-left me-1"></i>Back to Queue
+            </a>
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                {{ log.original_filename or log.stored_filename }}
+            </h2>
+            <p class="text-muted mb-0">
+                UUID: <span class="font-monospace">{{ document_uuid }}</span>
+                &nbsp;&mdash;&nbsp;
+                Ingested: {{ log.created_at.strftime('%d %b %Y, %H:%M') if log.created_at else '—' }}
+            </p>
+        </div>
+
+        <!-- Approve / Reject Actions -->
+        {% if draft_quotation %}
+        <div class="d-flex gap-2 align-items-center">
+            {% if draft_quotation.status == "Draft" %}
+            <button class="btn btn-success px-4" id="approveBtn" onclick="approveDocument()">
+                <i class="bi bi-check-circle me-1"></i>Approve
+            </button>
+            <button class="btn btn-danger px-4" id="rejectBtn" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                <i class="bi bi-x-circle me-1"></i>Reject
+            </button>
+            {% elif draft_quotation.status == "Approved" %}
+            <span class="badge bg-success fs-6 px-3 py-2">
+                <i class="bi bi-check-circle me-1"></i>Approved
+            </span>
+            {% elif draft_quotation.status == "Rejected" %}
+            <span class="badge bg-danger fs-6 px-3 py-2">
+                <i class="bi bi-x-circle me-1"></i>Rejected
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Status Alert -->
+    <div id="statusAlert" class="d-none mb-3"></div>
+
+    <div class="row g-4">
+
+        <!-- ── LEFT COLUMN ── -->
+        <div class="col-lg-8">
+
+            {% if not extraction_payload %}
+            <!-- No extraction yet -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body text-center py-5 text-muted">
+                    <i class="bi bi-cpu fs-1 d-block mb-3 text-secondary"></i>
+                    <h5>No extraction data available yet.</h5>
+                    <p class="small">Run the pipeline steps in Swagger:<br>
+                       <code>POST /document-intelligence/{{ document_uuid }}/extract-text</code><br>
+                       <code>POST /document-intelligence/{{ document_uuid }}/parse</code><br>
+                       <code>POST /document-intelligence/{{ document_uuid }}/resolve-entities</code><br>
+                       <code>POST /document-intelligence/{{ document_uuid }}/validate</code>
+                    </p>
+                </div>
+            </div>
+            {% else %}
+
+            <!-- Vendor Information -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-building text-primary me-2"></i>Vendor Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set vm = extraction_payload.get("vendor_metadata") or {} %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="text-muted small">Vendor Name</div>
+                            <div class="fw-semibold">
+                                {{ (vm.get("vendor_name") or {}).get("value") or "—" }}
+                                {% set conf = (vm.get("vendor_name") or {}).get("confidence", 0) %}
+                                {% if conf %}
+                                <span class="badge bg-light text-dark border ms-1 small">{{ "%.0f"|format(conf * 100) }}%</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">GST Number</div>
+                            <div class="fw-semibold font-monospace">{{ (vm.get("gst_number") or {}).get("value") or "—" }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Resolved Supplier Code</div>
+                            {% set sc = vm.get("supplier_code") %}
+                            {% if sc and sc is mapping %}
+                                <div class="fw-semibold text-success">{{ sc.get("value") or "—" }}</div>
+                            {% elif sc %}
+                                <div class="fw-semibold text-success">{{ sc }}</div>
+                            {% else %}
+                                <div class="text-warning small"><i class="bi bi-exclamation-triangle me-1"></i>Not resolved</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Contact</div>
+                            <div>{{ (vm.get("contact_person") or {}).get("value") or "—" }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Phone</div>
+                            <div>{{ (vm.get("phone_number") or {}).get("value") or "—" }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Email</div>
+                            <div>{{ (vm.get("email") or {}).get("value") or "—" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Commercial Summary -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-cash-stack text-primary me-2"></i>Commercial Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set cm = extraction_payload.get("commercial_metadata") or {} %}
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="text-muted small">Payment Terms</div>
+                            <div class="fw-semibold">{{ (cm.get("payment_terms") or {}).get("value") or "—" }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted small">Delivery Terms</div>
+                            <div>{{ (cm.get("delivery_terms") or {}).get("value") or "—" }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted small">Total Tax Amount</div>
+                            <div class="fw-semibold">
+                                {% set tax = (cm.get("total_tax_amount") or {}).get("value") %}
+                                {{ "₹{:,.2f}".format(tax) if tax else "—" }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted small">Grand Total</div>
+                            <div class="fw-bold text-primary fs-5">
+                                {% set gt = (cm.get("grand_total_amount") or {}).get("value") %}
+                                {{ "₹{:,.2f}".format(gt) if gt else "—" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line Items Table -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-list-ol text-primary me-2"></i>Line Items
+                        <span class="badge bg-light text-dark border ms-2">
+                            {{ extraction_payload.get("line_items", []) | length }}
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% set items = extraction_payload.get("line_items") or [] %}
+                    {% if items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">#</th>
+                                    <th>Material</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Rate</th>
+                                    <th class="text-end">Tax%</th>
+                                    <th class="text-end">Total</th>
+                                    <th>Resolved</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td class="ps-3 text-muted">{{ item.get("item_index", loop.index) }}</td>
+                                    <td>
+                                        <div class="fw-semibold">{{ (item.get("material_name") or {}).get("value") or "—" }}</div>
+                                        {% if (item.get("offered_brand") or {}).get("value") %}
+                                        <div class="text-muted small">{{ item["offered_brand"]["value"] }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {{ (item.get("quantity") or {}).get("value") or "—" }}
+                                        {{ (item.get("unit_of_measure") or {}).get("value") or "" }}
+                                    </td>
+                                    <td class="text-end">
+                                        {% set rate = (item.get("basic_rate") or {}).get("value") %}
+                                        {{ "₹{:,.2f}".format(rate) if rate else "—" }}
+                                    </td>
+                                    <td class="text-end">
+                                        {% set tax = (item.get("tax_percent") or {}).get("value") %}
+                                        {{ "{}%".format(tax) if tax else "—" }}
+                                    </td>
+                                    <td class="text-end fw-semibold">
+                                        {% set total = (item.get("total_item_amount") or {}).get("value") %}
+                                        {{ "₹{:,.2f}".format(total) if total else "—" }}
+                                    </td>
+                                    <td>
+                                        {% if item.get("material_id") %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check me-1"></i>ID: {{ item["material_id"] }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted border">Unresolved</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">No line items extracted.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Validation Report -->
+            {% set vs = extraction_payload.get("validation_summary") or {} %}
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-shield-check text-primary me-2"></i>Validation Report
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for section_key, section_label in [
+                        ("schema_validation", "Schema Validation"),
+                        ("mathematical_validation", "Mathematical Validation"),
+                        ("business_validation", "Business Validation"),
+                        ("semantic_validation", "Entity Resolution")
+                    ] %}
+                    {% set section = vs.get(section_key) or {} %}
+                    {% if section %}
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <strong>{{ section_label }}</strong>
+                            {% set s = section.get("status", "UNKNOWN") %}
+                            {% if s == "PASSED" %}
+                            <span class="badge bg-success">PASSED</span>
+                            {% elif s == "WARNING" %}
+                            <span class="badge bg-warning text-dark">WARNING</span>
+                            {% elif s == "FAILED" %}
+                            <span class="badge bg-danger">FAILED</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ s }}</span>
+                            {% endif %}
+                        </div>
+                        {% for log_entry in section.get("logs", []) %}
+                        <div class="d-flex align-items-start gap-2 ps-3 mb-1 small">
+                            {% if log_entry.get("status") == "PASSED" %}
+                            <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
+                            {% elif log_entry.get("status") == "WARNING" %}
+                            <i class="bi bi-exclamation-triangle-fill text-warning mt-1 flex-shrink-0"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger mt-1 flex-shrink-0"></i>
+                            {% endif %}
+                            <span class="text-muted">{{ log_entry.get("message") or log_entry.get("rule_name") }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% endif %} {# end if extraction_payload #}
+        </div>
+
+        <!-- ── RIGHT COLUMN ── -->
+        <div class="col-lg-4">
+
+            <!-- Document Metadata -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-info-circle text-primary me-2"></i>Document Details
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <div class="text-muted small">Processing Status</div>
+                        {% if log.processing_status == "DONE" %}
+                        <span class="badge bg-success">DONE</span>
+                        {% elif log.processing_status == "PENDING" %}
+                        <span class="badge bg-warning text-dark">PENDING</span>
+                        {% elif log.processing_status == "FAILED" %}
+                        <span class="badge bg-danger">FAILED</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ log.processing_status }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-muted small">Document Type</div>
+                        <div>{{ log.document_type or "—" }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-muted small">File Size</div>
+                        <div>{{ "%.1f KB" | format(log.file_size_bytes / 1024) }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-muted small">Source</div>
+                        <div>{{ log.source }}</div>
+                    </div>
+                    {% if log.file_path %}
+                    <a href="/uploads/quotation_documents/{{ log.stored_filename }}" target="_blank"
+                       class="btn btn-sm btn-outline-secondary w-100 mt-2">
+                        <i class="bi bi-eye me-1"></i>View Original File
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Draft Quotation Status -->
+            {% if draft_quotation %}
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-file-check text-primary me-2"></i>Draft Quotation
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <div class="text-muted small">Quotation Number</div>
+                        <div class="fw-semibold text-primary">{{ draft_quotation.quotation_number }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-muted small">Status</div>
+                        {% if draft_quotation.status == "Draft" %}
+                        <span class="badge bg-warning text-dark">Draft — Awaiting Review</span>
+                        {% elif draft_quotation.status == "Approved" %}
+                        <span class="badge bg-success">Approved</span>
+                        {% elif draft_quotation.status == "Rejected" %}
+                        <span class="badge bg-danger">Rejected</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ draft_quotation.status }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-muted small">Grand Total</div>
+                        <div class="fw-bold text-primary">
+                            {% if draft_quotation.grand_total %}
+                                &#8377;{{ "{:,.2f}".format(draft_quotation.grand_total | float) }}
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-muted small">Line Items</div>
+                        <div>{{ draft_items | length }}</div>
+                    </div>
+                    {% if rfq %}
+                    <div class="mb-2">
+                        <div class="text-muted small">Associated RFQ</div>
+                        <div>
+                            <a href="/dashboard/rfq/{{ rfq.id }}" class="text-decoration-none">
+                                {{ rfq.rfq_number }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <a href="/dashboard/quotation/{{ draft_quotation.id }}"
+                       class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="bi bi-eye me-1"></i>View Full Quotation
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body text-center py-4 text-muted">
+                    <i class="bi bi-file-earmark-x fs-2 d-block mb-2 text-secondary"></i>
+                    <div class="small">No draft quotation created yet.</div>
+                    <div class="small mt-1">Use <code>POST /{uuid}/create-draft-quotation</code> via Swagger to draft one.</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Pipeline Steps Reference -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-diagram-3 text-secondary me-2"></i>Pipeline Steps
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush rounded-4">
+                        {% set steps = [
+                            ("extract-text", "Text Extraction", "bi-file-text"),
+                            ("parse", "AI Extraction", "bi-cpu"),
+                            ("resolve-entities", "Entity Resolution", "bi-link"),
+                            ("validate", "Business Validation", "bi-shield-check"),
+                            ("create-draft-quotation?rfq_id=1", "Draft Quotation", "bi-file-check"),
+                        ] %}
+                        {% for step_url, step_label, step_icon in steps %}
+                        <li class="list-group-item border-0 py-2 px-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi {{ step_icon }} text-primary"></i>
+                                <div>
+                                    <div class="fw-semibold small">{{ step_label }}</div>
+                                    <code class="text-muted" style="font-size:0.7rem">POST /{{ document_uuid }}/{{ step_url }}</code>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-danger" id="rejectModalLabel">
+                    <i class="bi bi-x-circle me-2"></i>Reject Document
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Please provide a reason for rejection. This will be recorded in the audit log.</p>
+                <div class="mb-3">
+                    <label for="rejectReason" class="form-label fw-semibold">Reason <span class="text-muted fw-normal">(optional)</span></label>
+                    <textarea id="rejectReason" class="form-control" rows="3"
+                              placeholder="e.g. Incorrect vendor, amounts don't match PO, duplicate document…"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="rejectedBy" class="form-label fw-semibold">Your Name / ID</label>
+                    <input type="text" id="rejectedBy" class="form-control" value="HUMAN_REVIEWER"
+                           placeholder="Your name or employee ID">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="rejectDocument()">
+                    <i class="bi bi-x-circle me-1"></i>Confirm Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DOCUMENT_UUID = "{{ document_uuid }}";
+
+function showAlert(message, type) {
+    const alertEl = document.getElementById("statusAlert");
+    alertEl.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+    alertEl.classList.remove("d-none");
+    alertEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function approveDocument() {
+    const btn = document.getElementById("approveBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Approving…';
+
+    try {
+        const response = await fetch(`/document-intelligence/${DOCUMENT_UUID}/approve`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" }
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            showAlert(`<i class="bi bi-check-circle-fill me-2"></i><strong>Approved!</strong> ${data.message}`, "success");
+            btn.classList.remove("btn-success");
+            btn.classList.add("btn-secondary");
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Approved';
+            const rejectBtn = document.getElementById("rejectBtn");
+            if (rejectBtn) rejectBtn.disabled = true;
+        } else {
+            showAlert(`<i class="bi bi-exclamation-triangle me-2"></i><strong>Error:</strong> ${data.detail || "Approval failed."}`, "danger");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Approve';
+        }
+    } catch (err) {
+        showAlert(`<i class="bi bi-exclamation-triangle me-2"></i><strong>Network error:</strong> ${err.message}`, "danger");
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Approve';
+    }
+}
+
+async function rejectDocument() {
+    const reason = document.getElementById("rejectReason").value.trim();
+    const rejectedBy = document.getElementById("rejectedBy").value.trim() || "HUMAN_REVIEWER";
+
+    const modalEl = document.getElementById("rejectModal");
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    modal.hide();
+
+    try {
+        const params = new URLSearchParams({ rejected_by: rejectedBy, reason: reason });
+        const response = await fetch(`/document-intelligence/${DOCUMENT_UUID}/reject?${params}`, {
+            method: "PATCH",
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            showAlert(`<i class="bi bi-x-circle-fill me-2"></i><strong>Rejected.</strong> ${data.message}`, "warning");
+            const approveBtn = document.getElementById("approveBtn");
+            const rejectBtn = document.getElementById("rejectBtn");
+            if (approveBtn) { approveBtn.disabled = true; approveBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Approve'; }
+            if (rejectBtn) { rejectBtn.disabled = true; rejectBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Rejected'; rejectBtn.classList.remove("btn-danger"); rejectBtn.classList.add("btn-secondary"); }
+        } else {
+            showAlert(`<i class="bi bi-exclamation-triangle me-2"></i><strong>Error:</strong> ${data.detail || "Rejection failed."}`, "danger");
+        }
+    } catch (err) {
+        showAlert(`<i class="bi bi-exclamation-triangle me-2"></i><strong>Network error:</strong> ${err.message}`, "danger");
+    }
+}
+</script>
+{% endblock %}

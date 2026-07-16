@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException
 
 from app.models.document_ingestion_log import DocumentIngestionLog
+from app.services.extraction import get_extraction_provider
 
 
 # ──────────────────────────────────────────────────────────────
@@ -268,9 +269,10 @@ def extract_text_from_pdf(
     document_uuid: str
 ) -> dict:
     """
-    Open the ingested PDF using PyMuPDF (fitz) and extract the digital text layer.
-    Saves the extracted text to a parallel text file on disk.
-    If the PDF doesn't contain extractable text (< 50 chars), it flags it as requiring OCR.
+    Master text extraction orchestrator:
+    1. If file is a digital PDF, attempts digital text extraction (fast, CPU-only).
+    2. If digital text is missing/scanned or the file is an image, falls back
+       automatically to local OCR extraction (PaddleOCR CPU-only).
 
     Args:
         db            : SQLAlchemy session.
@@ -286,66 +288,207 @@ def extract_text_from_pdf(
             detail=f"Ingestion log for document UUID '{document_uuid}' not found."
         )
 
-    # Scanned fallback for images
+    # If it is an image, go directly to OCR
     if log.file_extension.lower() in [".jpg", ".jpeg", ".png"]:
-        return {
-            "document_uuid": document_uuid,
-            "requires_ocr": True,
-            "page_count": 0,
-            "character_count": 0,
-            "extracted_text_path": None,
-            "preview": "Image file requires OCR (Phase 3)."
-        }
+        return extract_text_via_ocr(db, document_uuid)
 
     if log.file_extension.lower() != ".pdf":
         raise HTTPException(
             status_code=400,
-            detail=f"Digital text extraction is only supported for PDF files. Document has extension '{log.file_extension}'."
+            detail=f"Unsupported file type '{log.file_extension}'. Only PDF and image uploads are supported."
         )
 
-    if not os.path.exists(log.file_path):
-        raise HTTPException(
-            status_code=500,
-            detail=f"Source PDF file not found at path '{log.file_path}'."
-        )
+    # First attempt digital text extraction (Phase 2)
+    # Check if a digital text file already exists for this document
+    text_filename = f"{document_uuid}_extracted.txt"
+    text_path = os.path.join(INGEST_FOLDER, text_filename).replace("\\", "/")
 
+    if os.path.exists(text_path):
+        with open(text_path, "r", encoding="utf-8") as f:
+            total_text = f.read()
+        
+        doc_type = log.document_type
+        if not doc_type:
+            try:
+                doc_type = classify_document(db, document_uuid)
+            except Exception:
+                doc_type = "UNKNOWN"
+                
+        return {
+            "document_uuid": document_uuid,
+            "requires_ocr": False,
+            "page_count": 0,
+            "character_count": len(total_text),
+            "extracted_text_path": text_path,
+            "document_type": doc_type,
+            "preview": total_text[:250] + ("..." if len(total_text) > 250 else "")
+        }
+
+    # Open PDF with PyMuPDF to test digital layer
     try:
         doc = fitz.open(log.file_path)
         page_count = len(doc)
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to open PDF document with PyMuPDF: {str(e)}"
+            detail=f"Failed to open PDF document: {str(e)}"
         )
 
     extracted_pages = []
-    total_chars = 0
-
     try:
         for page in doc:
             page_text = page.get_text() or ""
             extracted_pages.append(page_text)
-            total_chars += len(page_text)
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred during PDF text extraction: {str(e)}"
+            detail=f"Error occurred during digital text read: {str(e)}"
         )
     finally:
         doc.close()
 
     total_text = "\n".join(extracted_pages).strip()
 
-    # If the text length is very low, it indicates a scanned PDF
+    # Fallback to OCR if digital text is empty or too short
     if len(total_text) < 50:
-        return {
-            "document_uuid": document_uuid,
-            "requires_ocr": True,
-            "page_count": page_count,
-            "character_count": len(total_text),
-            "extracted_text_path": None,
-            "preview": "Scanned PDF or empty vector document. Requires OCR (Phase 3)."
-        }
+        return extract_text_via_ocr(db, document_uuid)
+
+    # Save digital text
+    try:
+        with open(text_path, "w", encoding="utf-8") as f:
+            f.write(total_text)
+    except OSError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save extracted digital text: {str(e)}"
+        )
+
+    # Update database log status
+    try:
+        log.processing_status = "PROCESSING"
+        db.commit()
+        db.refresh(log)
+    except Exception as e:
+        db.rollback()
+        if os.path.exists(text_path):
+            os.remove(text_path)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error while updating processing status: {str(e)}"
+        )
+
+    # Classify document automatically
+    try:
+        doc_type = classify_document(db, document_uuid)
+    except Exception:
+        doc_type = "UNKNOWN"
+
+    return {
+        "document_uuid": document_uuid,
+        "requires_ocr": False,
+        "page_count": len(extracted_pages),
+        "character_count": len(total_text),
+        "extracted_text_path": text_path,
+        "document_type": doc_type,
+        "preview": total_text[:250] + ("..." if len(total_text) > 250 else "")
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# Phase 3: Local OCR Extraction
+# ──────────────────────────────────────────────────────────────
+
+def extract_text_via_ocr(
+    db: Session,
+    document_uuid: str
+) -> dict:
+    """
+    Open the ingested image or PDF, convert pages to PNG if PDF,
+    and run local PaddleOCR to extract text blocks.
+    Saves the extracted text to a parallel text file on disk.
+
+    Args:
+        db            : SQLAlchemy session.
+        document_uuid : UUID string of the ingested document.
+
+    Returns:
+        dict containing extraction metrics and preview.
+    """
+    import tempfile
+
+    log = get_ingested_document(db, document_uuid)
+    if not log:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Ingestion log for document UUID '{document_uuid}' not found."
+        )
+
+    if not os.path.exists(log.file_path):
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source file not found at path '{log.file_path}'."
+        )
+
+    temp_dir = None
+    images_paths = []
+
+    try:
+        # Step 1: Prepare pages as images
+        if log.file_extension.lower() in [".jpg", ".jpeg", ".png"]:
+            images_paths.append(log.file_path)
+        elif log.file_extension.lower() == ".pdf":
+            temp_dir = tempfile.mkdtemp()
+            try:
+                doc = fitz.open(log.file_path)
+                for page_idx, page in enumerate(doc):
+                    pix = page.get_pixmap(dpi=150)
+                    img_path = os.path.join(temp_dir, f"page_{page_idx}.png")
+                    pix.save(img_path)
+                    images_paths.append(img_path)
+                doc.close()
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to convert PDF pages to images for OCR: {str(e)}"
+                )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"OCR extraction is not supported for extension '{log.file_extension}'."
+            )
+
+        # Step 2: Initialize PaddleOCR dynamically (lazy import)
+        try:
+            from paddleocr import PaddleOCR
+            ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to initialize PaddleOCR engine: {str(e)}"
+            )
+
+        # Step 3: Run OCR extraction
+        extracted_lines = []
+        try:
+            for img_path in images_paths:
+                result = ocr.ocr(img_path, cls=True)
+                if result and result[0]:
+                    for line in result[0]:
+                        text = line[1][0]
+                        if text:
+                            extracted_lines.append(text)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"PaddleOCR processing error: {str(e)}"
+            )
+
+    finally:
+        # Cleanup temporary directory if generated
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    total_text = "\n".join(extracted_lines).strip()
 
     # Save extracted text to a parallel text file
     text_filename = f"{document_uuid}_extracted.txt"
@@ -357,7 +500,7 @@ def extract_text_from_pdf(
     except OSError as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to save extracted text to disk: {str(e)}"
+            detail=f"Failed to save extracted OCR text to disk: {str(e)}"
         )
 
     # Update database log status
@@ -367,7 +510,6 @@ def extract_text_from_pdf(
         db.refresh(log)
     except Exception as e:
         db.rollback()
-        # Clean up text file on failure
         if os.path.exists(text_path):
             os.remove(text_path)
         raise HTTPException(
@@ -375,13 +517,193 @@ def extract_text_from_pdf(
             detail=f"Database error while updating processing status: {str(e)}"
         )
 
-    # Return summary details
+    # Classify document automatically
+    try:
+        doc_type = classify_document(db, document_uuid)
+    except Exception:
+        doc_type = "UNKNOWN"
+
     return {
         "document_uuid": document_uuid,
-        "requires_ocr": False,
-        "page_count": len(extracted_pages),
-        "character_count": total_chars,
+        "requires_ocr": True,
+        "page_count": len(images_paths),
+        "character_count": len(total_text),
         "extracted_text_path": text_path,
+        "document_type": doc_type,
         "preview": total_text[:250] + ("..." if len(total_text) > 250 else "")
     }
+
+
+# ──────────────────────────────────────────────────────────────
+# Phase 4: Document Classification & Routing
+# ──────────────────────────────────────────────────────────────
+
+CLASSIFICATION_RULES = {
+    "QUOTATION": ["quotation", "quote", "estimate", "proforma invoice", "est-", "qtn", "qt-"],
+    "PURCHASE_ORDER": ["purchase order", "po no", "po-", "po_no", "order placement"],
+    "INVOICE": ["tax invoice", "invoice", "bill", "cash memo", "sales order", "invoice no", "inv-"],
+    "DELIVERY_CHALLAN": ["delivery challan", "delivery note", "challan no", "dispatch note", "gate pass"],
+    "GRN": ["goods receipt note", "grn", "material receipt", "mrv", "receive note"],
+    "TEST_CERTIFICATE": ["test certificate", "mill test", "tc", "chemical composition", "mechanical properties"]
+}
+
+def classify_document(
+    db: Session,
+    document_uuid: str
+) -> str:
+    """
+    Classify the ingested document using rules-based keyword matching.
+    Scans the extracted text file to determine the document type.
+    Updates the 'document_type' column in the ingestion logs.
+
+    Args:
+        db            : SQLAlchemy session.
+        document_uuid : UUID string of the ingested document.
+
+    Returns:
+        str: Classified document type (e.g. 'QUOTATION', 'PURCHASE_ORDER').
+    """
+    log = get_ingested_document(db, document_uuid)
+    if not log:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Ingestion log for document UUID '{document_uuid}' not found."
+        )
+
+    # Resolve extracted text path
+    text_filename = f"{document_uuid}_extracted.txt"
+    text_path = os.path.join(INGEST_FOLDER, text_filename).replace("\\", "/")
+
+    if not os.path.exists(text_path):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Extracted text file not found for document UUID '{document_uuid}'. Run text extraction first."
+        )
+
+    try:
+        with open(text_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to read extracted text file: {str(e)}"
+        )
+
+    text_lower = text.lower()
+    scores = {k: 0 for k in CLASSIFICATION_RULES.keys()}
+
+    # Priorities & special matches
+    if "proforma invoice" in text_lower:
+        scores["QUOTATION"] += 5
+    if "tax invoice" in text_lower:
+        scores["INVOICE"] += 5
+    if "sales order" in text_lower:
+        scores["INVOICE"] += 3
+
+    for doc_type, keywords in CLASSIFICATION_RULES.items():
+        for kw in keywords:
+            count = text_lower.count(kw)
+            scores[doc_type] += count
+
+    best_type = max(scores, key=scores.get)
+    classified_type = best_type if scores[best_type] > 0 else "UNKNOWN"
+
+    try:
+        log.document_type = classified_type
+        db.commit()
+        db.refresh(log)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error while saving document classification: {str(e)}"
+        )
+
+    return classified_type
+
+
+# ──────────────────────────────────────────────────────────────
+# Phase 6: AI Extraction Provider Framework
+# ──────────────────────────────────────────────────────────────
+
+def parse_with_llm(
+    db: Session,
+    document_uuid: str
+) -> dict:
+    """
+    Load the extracted text of the document, trigger the configured
+    AI extraction provider (Gemini, Groq, or Ollama), validate the JSON,
+    save the raw JSON output to disk, and transition database status to 'DONE'.
+
+    Args:
+        db            : SQLAlchemy session.
+        document_uuid : UUID string of the ingested document.
+
+    Returns:
+        dict: The extracted structured data payload as a dictionary.
+    """
+    log = get_ingested_document(db, document_uuid)
+    if not log:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Ingestion log for document UUID '{document_uuid}' not found."
+        )
+
+    # Path to raw extracted text file
+    text_filename = f"{document_uuid}_extracted.txt"
+    text_path = os.path.join(INGEST_FOLDER, text_filename).replace("\\", "/")
+
+    if not os.path.exists(text_path):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Raw text extraction has not been performed for document UUID '{document_uuid}'. Run text extraction first."
+        )
+
+    try:
+        with open(text_path, "r", encoding="utf-8") as f:
+            raw_text = f.read()
+    except OSError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to read raw extracted text file: {str(e)}"
+        )
+
+    # Initialize configured provider
+    provider = get_extraction_provider()
+
+    # Trigger extraction
+    payload = provider.extract(raw_text, document_uuid)
+
+    # Save structured JSON output to disk parallel to text
+    json_filename = f"{document_uuid}_extracted.json"
+    json_path = os.path.join(INGEST_FOLDER, json_filename).replace("\\", "/")
+
+    try:
+        with open(json_path, "w", encoding="utf-8") as f:
+            f.write(payload.model_dump_json(indent=2))
+    except OSError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save structured JSON extraction on disk: {str(e)}"
+        )
+
+    # Update database log status to DONE
+    try:
+        log.processing_status = "DONE"
+        db.commit()
+        db.refresh(log)
+    except Exception as e:
+        db.rollback()
+        # Clean up JSON file on database update failure
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error while transitioning status to DONE: {str(e)}"
+        )
+
+    return payload.model_dump()
+
+
+
 
