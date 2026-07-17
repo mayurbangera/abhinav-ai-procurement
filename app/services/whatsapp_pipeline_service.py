@@ -122,14 +122,14 @@ def process_whatsapp_document_pipeline(
     doc_type = classify_document(db, uuid)
     logger.info(f"Document classified as: {doc_type}")
 
-    if doc_type != "QUOTATION":
-        logger.info(f"Document UUID {uuid} classified as {doc_type}, not QUOTATION. Skipping extraction parsing.")
-        # Notify supplier that we received the document but it was not classified as a Quotation
+    if doc_type not in ["QUOTATION", "INVOICE"]:
+        logger.info(f"Document UUID {uuid} classified as {doc_type}, not QUOTATION or INVOICE. Skipping extraction parsing.")
+        # Notify supplier that we received the document but it was not classified as a Quotation or Invoice
         send_text_message(
             sender_phone,
             f"Dear {supplier.contact_person_name},\n\n"
             f"Thank you for sending your document. We classified this document as a {doc_type}. "
-            f"Please note that only Quotation files are processed automatically. "
+            f"Please note that only Quotation and Invoice files are processed automatically. "
             f"Our procurement team will review this manually if necessary."
         )
         return {

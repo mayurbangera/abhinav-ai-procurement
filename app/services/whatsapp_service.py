@@ -12,7 +12,7 @@ def send_text_message(
 ):
 
     url = (
-        f"https://graph.facebook.com/v23.0/"
+        f"https://graph.facebook.com/v19.0/"
         f"{META_PHONE_NUMBER_ID}/messages"
     )
 

@@ -539,9 +539,9 @@ def extract_text_via_ocr(
 # ──────────────────────────────────────────────────────────────
 
 CLASSIFICATION_RULES = {
-    "QUOTATION": ["quotation", "quote", "estimate", "proforma invoice", "est-", "qtn", "qt-"],
+    "QUOTATION": ["quotation", "quote", "estimate", "proforma invoice", "est-", "qtn", "qt-", "sales order", "order confirmation", "order acknowledgment"],
     "PURCHASE_ORDER": ["purchase order", "po no", "po-", "po_no", "order placement"],
-    "INVOICE": ["tax invoice", "invoice", "bill", "cash memo", "sales order", "invoice no", "inv-"],
+    "INVOICE": ["tax invoice", "invoice", "bill", "cash memo", "invoice no", "inv-"],
     "DELIVERY_CHALLAN": ["delivery challan", "delivery note", "challan no", "dispatch note", "gate pass"],
     "GRN": ["goods receipt note", "grn", "material receipt", "mrv", "receive note"],
     "TEST_CERTIFICATE": ["test certificate", "mill test", "tc", "chemical composition", "mechanical properties"]

@@ -12,7 +12,7 @@ def get_media_url(
 ):
 
     url = (
-        f"https://graph.facebook.com/v23.0/"
+        f"https://graph.facebook.com/v19.0/"
         f"{media_id}"
     )
 

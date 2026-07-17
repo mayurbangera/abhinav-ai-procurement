@@ -13,6 +13,7 @@ from app.models.rfq_vendor import RFQVendor
 from app.models.supplier import Supplier
 from app.models.quotation import Quotation
 from app.models.quotation_item import QuotationItem
+from app.models.document_ingestion_log import DocumentIngestionLog
 from dateutil.parser import parse as parse_date
 
 
@@ -69,6 +70,10 @@ def create_draft_quotation(
         raise HTTPException(status_code=500, detail=f"Failed to parse extraction JSON: {e}")
 
     # ── 1. Resolve the RFQ ────────────────────────────────────────────────────
+    log_record = db.query(DocumentIngestionLog).filter(
+        DocumentIngestionLog.document_uuid == document_uuid
+    ).first()
+
     from app.models.rfq_vendor import RFQVendor  # ensure registry loaded
     rfq = db.query(RFQ).filter(RFQ.id == rfq_id).first()
     if not rfq:
@@ -88,8 +93,12 @@ def create_draft_quotation(
 
     supplier: Optional[Supplier] = None
 
-    # Try exact supplier_code first (set by Phase 7 resolution)
-    if supplier_code:
+    # Try authenticated supplier from ingestion log first
+    if log_record and log_record.supplier_id:
+        supplier = db.query(Supplier).filter(Supplier.id == log_record.supplier_id).first()
+
+    # Try exact supplier_code second
+    if not supplier and supplier_code:
         supplier = db.query(Supplier).filter(Supplier.supplier_code == str(supplier_code)).first()
 
     # Try exact GST match
